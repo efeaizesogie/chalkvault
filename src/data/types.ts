@@ -106,6 +106,20 @@ export interface TermRecord {
   updatedBy: string;
 }
 
+export type Mark = 'P' | 'L' | 'A';
+export const MARK_LABEL: Record<Mark, string> = { P: 'Present', L: 'Late', A: 'Absent' };
+
+/** One class register for one day. */
+export interface AttendanceDay {
+  id: string; // `${classId}_${date}`
+  classId: string;
+  termId: string;
+  date: string; // YYYY-MM-DD
+  marks: Record<string, Mark>; // studentId -> mark
+  takenBy: string;
+  updatedAt: number;
+}
+
 export interface LedgerEntry {
   id: string;
   at: number;

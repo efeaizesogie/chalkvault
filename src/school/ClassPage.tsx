@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Navigate, useOutletContext, useParams } from 'react-router-dom';
+import { Navigate, useOutletContext, useParams, useSearchParams } from 'react-router-dom';
 import { query, where } from 'firebase/firestore';
 import { addStudents, deleteStudent, paths, saveClass, deleteClass, saveRecord, saveStudent } from '../data/api';
 import { useQuery } from '../data/hooks';
@@ -11,6 +11,13 @@ import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
 import { useCommentWriter } from './useCommentWriter';
 import type { WorkspaceCtx } from './Workspace';
+import { AttendanceView } from './AttendanceView';
+
+type Tab = 'comments' | 'attendance' | 'scores';
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'comments', label: 'Comments' },
+  { id: 'attendance', label: 'Attendance' },
+];
 
 /** Join a student's profile with this term's record into the shape the sheet and desk use. */
 function merge(p: StudentProfile, r?: TermRecord): Student {
@@ -37,6 +44,8 @@ export function ClassPage() {
   const termId = term?.id ?? '';
   const [activeId, setActiveId] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
+  const [params, setParams] = useSearchParams();
+  const tab = (TABS.find((t) => t.id === params.get('tab'))?.id ?? 'comments') as Tab;
 
   const profiles = useQuery<StudentProfile>(allowed ? query(paths.students(schoolId), where('classId', '==', classId)) : null, `students:${schoolId}:${classId}:${allowed}`);
   const records = useQuery<TermRecord>(
@@ -81,6 +90,18 @@ export function ClassPage() {
   const active = students.find((s) => s.id === activeId) ?? students[0] ?? null;
 
   return (
+    <div className="class-wrap">
+      <nav className="class-tabs" aria-label="Class views">
+        <span className="class-tabs-name">{cls.name}</span>
+        {TABS.map((t) => (
+          <button key={t.id} className={tab === t.id ? 'on' : ''} aria-current={tab === t.id ? 'page' : undefined} onClick={() => setParams(t.id === 'comments' ? {} : { tab: t.id })}>
+            {t.label}
+          </button>
+        ))}
+      </nav>
+      {tab === 'attendance' ? (
+        <AttendanceView cls={cls} students={profiles.data.slice().sort((a, b) => a.order - b.order)} ws={ws} />
+      ) : (
     <div className="class-page">
       <ClassSheet
         cls={cls}
@@ -138,6 +159,8 @@ export function ClassPage() {
           }
           onClose={() => setEditing(false)}
         />
+      )}
+    </div>
       )}
     </div>
   );

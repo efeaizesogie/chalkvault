@@ -17,6 +17,7 @@ import {
 } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
 import type {
+  AttendanceDay,
   ClassRoom,
   Invite,
   LedgerEntry,
@@ -48,6 +49,8 @@ export const paths = {
   records: (s: string) => collection(getDb(), 'schools', s, 'records'),
   record: (s: string, t: string, st: string) => doc(getDb(), 'schools', s, 'records', `${t}_${st}`),
   ledger: (s: string) => collection(getDb(), 'schools', s, 'ledger'),
+  attendance: (s: string) => collection(getDb(), 'schools', s, 'attendance'),
+  attendanceDay: (s: string, classId: string, date: string) => doc(getDb(), 'schools', s, 'attendance', `${classId}_${date}`),
   user: (u: string) => doc(getDb(), 'users', u),
 };
 
@@ -224,12 +227,22 @@ export async function deleteStudent(schoolId: string, student: StudentProfile) {
 }
 
 // ---------- Term records ----------
-export async function saveRecord(schoolId: string, by: string, r: Omit<TermRecord, 'updatedAt' | 'updatedBy'>) {
-  // Firestore rejects undefined values, so drop them.
-  const clean = Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined));
-  await setDoc(paths.record(schoolId, r.termId, r.studentId), { ...clean, updatedAt: now(), updatedBy: by });
+export async function saveRecord(schoolId: string, by: string, r: Partial<TermRecord> & Pick<TermRecord, 'termId' | 'studentId' | 'classId'>) {
+  // Merge, so fields owned by other screens (scores, approval) survive. A key passed as undefined is cleared.
+  const patch = Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === undefined ? deleteField() : v]));
+  await setDoc(paths.record(schoolId, r.termId, r.studentId), { ...patch, updatedAt: now(), updatedBy: by }, { merge: true });
 }
 
+
+// ---------- Attendance ----------
+export async function saveAttendance(schoolId: string, day: Omit<AttendanceDay, 'id' | 'updatedAt'>) {
+  const id = `${day.classId}_${day.date}`;
+  await setDoc(paths.attendanceDay(schoolId, day.classId, day.date), { ...day, id, updatedAt: now() } satisfies AttendanceDay);
+}
+export const todayISO = () => {
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
+};
 
 // ---------- Ledger ----------
 export async function addLedger(schoolId: string, e: Omit<LedgerEntry, 'id' | 'at'>) {

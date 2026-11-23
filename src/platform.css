@@ -229,3 +229,26 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 @media (prefers-reduced-motion: reduce) {
   .class-card, .hero-sheet, .lp-faq summary::after { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Class tabs and attendance ---------- */
+.class-wrap { display: flex; flex-direction: column; min-height: 100%; }
+.class-tabs { display: flex; align-items: center; gap: 4px; padding: 8px 16px; border-bottom: 1px solid var(--ink); background: var(--paper); flex-wrap: wrap; }
+.class-tabs-name { font: 400 18px/1 var(--serif); margin-right: 12px; }
+.class-tabs button { padding: 7px 14px; border-radius: 9999px; font-weight: 500; color: var(--ink-2); }
+.class-tabs button:hover { background: var(--paper-2); }
+.class-tabs button.on { background: var(--ink); color: var(--sheet); }
+.att { background: var(--sheet); }
+.att-bar { display: flex; align-items: center; gap: 16px; padding: 16px 24px; border-bottom: 1px solid var(--ink); flex-wrap: wrap; }
+.att-bar input[type='date'] { border: 1px solid var(--ink); border-radius: 12px; padding: 6px 10px; background: var(--sheet); }
+.att-counts { margin: 0; color: var(--ink-2); }
+.att-actions { margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+.att-photo-note { margin: 0; padding: 12px 24px; display: flex; gap: 12px; align-items: center; border-bottom: 1px solid var(--rule); background: var(--paper); }
+.att-hint { margin: 0; padding: 8px 24px; border-bottom: 1px solid var(--rule); }
+.att-row { grid-template-columns: 36px minmax(140px, 1fr) auto 140px; align-items: center; }
+.att-row .seg button.mark-A.on { background: var(--danger); color: var(--sheet); }
+.att-row .seg button.mark-L.on { background: var(--ticket); color: var(--ink); }
+@media (max-width: 820px) {
+  .att-row { grid-template-columns: 1fr; gap: 8px; }
+  .att-row.row-head { display: none; }
+  .att-actions { margin-left: 0; }
+}

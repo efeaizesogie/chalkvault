@@ -85,6 +85,14 @@ service cloud.firestore {
         allow delete: if canClass(resource.data.classId);
       }
 
+      // Daily registers, one document per class per day.
+      match /attendance/{dayId} {
+        allow read: if isAdmin() || (resource != null && teaches(resource.data.classId));
+        allow create: if canClass(request.resource.data.classId);
+        allow update: if canClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+        allow delete: if isAdmin();
+      }
+
       // Audit ledger of AI requests: any member can add their own entry; admins read all, others read their own.
       match /ledger/{entryId} {
         allow create: if isMember() && request.resource.data.uid == request.auth.uid;

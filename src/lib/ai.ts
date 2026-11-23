@@ -296,6 +296,58 @@ function parseDraft(text: string) {
   return out;
 }
 
+// ---------- Register photo (on-device only) ----------
+
+const registerSchema = {
+  type: 'object',
+  properties: {
+    rows: {
+      type: 'array',
+      items: {
+        type: 'object',
+        properties: {
+          name: { type: 'string', description: 'The student name exactly as it appears on the class list.' },
+          mark: { type: 'string', enum: ['P', 'L', 'A'], description: 'P present, L late, A absent.' },
+        },
+        required: ['name', 'mark'],
+        additionalProperties: false,
+      },
+    },
+  },
+  required: ['rows'],
+  additionalProperties: false,
+};
+
+let registerModel: GenerativeModel | null = null;
+
+/**
+ * Reads a photo of a handwritten register with Gemini Nano. ONLY_ON_DEVICE: a register shows
+ * every child's name, so the photo is never sent to the cloud, not even with names removed.
+ */
+export async function readRegister(image: { base64: string; mimeType: 'image/jpeg' | 'image/png' }, roster: string[], date: string) {
+  if ((await deviceStatus()) !== 'available') {
+    throw new PrivacyBlock('Reading a register photo needs Gemini Nano on this computer. The photo shows children’s names, so Chalkvault never sends it to the cloud.');
+  }
+  registerModel ??= getGenerativeModel(ai(), {
+    mode: InferenceMode.ONLY_ON_DEVICE,
+    onDeviceParams: { createOptions, promptOptions: { responseConstraint: registerSchema } },
+  });
+  const t0 = performance.now();
+  const prompt = [
+    `This is a photo of a handwritten class attendance register. Read the marks for ${date} (or the most recent column if dates are unclear).`,
+    'Class list:',
+    ...roster.map((n, i) => `${i + 1}. ${n}`),
+    'For each student on the class list, give their mark: P if present (a tick, P, / or a dot), L if late (L), A if absent (a cross, A, O or empty).',
+    'Use the names exactly as written in the class list. Skip anyone you cannot find in the photo.',
+  ].join('\n');
+  const res = await registerModel.generateContent([
+      { type: 'text', text: prompt },
+      { type: 'inlineData', inlineData: { data: image.base64, mimeType: image.mimeType } },
+    ]);
+  const obj = JSON.parse(res.response.text().trim().replace(/^```(?:json)?|```$/g, '')) as { rows?: { name: string; mark: 'P' | 'L' | 'A' }[] };
+  return { rows: obj.rows ?? [], ms: performance.now() - t0 };
+}
+
 // ---------- Cloud-only tools (always de-identified first) ----------
 
 export function prepareOutbound(comment: string, name: string, roster: string[]) {
