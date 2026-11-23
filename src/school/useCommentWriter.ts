@@ -31,6 +31,10 @@ export function useCommentWriter(opts: {
   const run = useCallback(async (s: Student, image?: Img) => {
     const { cls, termName, students, prefs, save, addLedger, toast } = o.current;
     if (!cls) return false;
+    if (s.status === 'approved') {
+      toast(`${s.name}’s comment is approved and locked. Ask an admin to unlock it first.`, 'warn');
+      return false;
+    }
     if (!s.notes.trim() && !image) {
       toast(`Add some notes for ${s.name} first.`);
       return false;
@@ -51,7 +55,7 @@ export function useCommentWriter(opts: {
         facts: o.current.getFacts?.(s),
         onPartial: (draft, source) => setLive((l) => ({ ...l, [s.id]: { draft, source } })),
       });
-      await save({ ...s, draft: res.draft, final: undefined });
+      await save({ ...s, draft: res.draft, final: undefined, status: undefined });
       await addLedger({
         task: `Comment${image ? ' + photo' : ''} · ${cls.name}`,
         source: res.draft.source,

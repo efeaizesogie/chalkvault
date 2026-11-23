@@ -4,6 +4,8 @@ import type { DeviceStatus } from '../lib/ai';
 import { batchQueue, download, finalText, slug, toCSV, toPlain } from '../lib/export';
 
 function status(s: Student) {
+  if (s.status === 'approved') return 'Approved';
+  if (s.status === 'submitted') return 'Waiting';
   if (s.final) return 'Final';
   if (s.draft) return 'Drafted';
   if (s.notes.trim()) return 'Notes';

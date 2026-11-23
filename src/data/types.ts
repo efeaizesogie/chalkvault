@@ -110,6 +110,9 @@ export interface TermRecord {
   translation?: { language: string; text: string; at: number };
   /** Scores by assessment key. */
   scores?: Record<string, number>;
+  /** Approval: a teacher submits; an owner or admin approves, which locks the comment. */
+  status?: 'submitted' | 'approved';
+  approvedBy?: string;
   updatedAt: number;
   updatedBy: string;
 }
@@ -148,6 +151,7 @@ export interface Student {
   draft?: Draft;
   final?: string;
   translation?: TermRecord['translation'];
+  status?: TermRecord['status'];
   order: number;
 }
 

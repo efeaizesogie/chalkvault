@@ -17,6 +17,8 @@ export function StudentDesk(props: {
   busy: boolean;
   /** The comment as it streams in, while busy. */
   live?: { draft: PartialDraft; source: 'on_device' | 'in_cloud' };
+  isAdmin: boolean;
+  limit: number;
   onSave: (s: Student) => Promise<void>;
   onWrite: (s: Student, image?: { base64: string; mimeType: 'image/jpeg' | 'image/png' }) => Promise<boolean>;
   onLedger: () => void;
@@ -74,8 +76,12 @@ export function StudentDesk(props: {
     if (ok) setImg(null);
   };
 
-  const commentChanged = s.draft && comment !== (s.final ?? s.draft.comment);
-  const isFinal = !!s.final && !commentChanged;
+  const commentChanged = !!s.draft && comment !== (s.final ?? s.draft.comment);
+  const locked = s.status === 'approved';
+  const over = comment.length > props.limit;
+  const approve = () => props.onSave({ ...s, final: comment, status: 'approved' });
+  const submit = () => props.onSave({ ...s, final: comment, status: 'submitted' });
+  const unlock = () => props.onSave({ ...s, status: undefined });
 
   const remove = async () => {
     if (!confirm(`Remove ${s.name} and their notes from this class? This cannot be undone.`)) return;
@@ -103,6 +109,7 @@ export function StudentDesk(props: {
         </span>
         <textarea
           className="ruled notes"
+          readOnly={s.status === 'approved' && !props.isAdmin}
           rows={5}
           value={notes}
           onChange={(e) => setNotes(e.target.value)}
@@ -215,11 +222,17 @@ export function StudentDesk(props: {
             </div>
           </dl>
           <label className="field">
-            <span className="mono field-label">Comment {isFinal && <b className="final-tag">Final</b>}</span>
-            <textarea className="comment" rows={7} value={comment} onChange={(e) => setComment(e.target.value)} />
+            <span className="mono field-label">
+              Comment
+              {locked && <b className="final-tag">Approved and locked</b>}
+              {s.status === 'submitted' && !commentChanged && <b className="final-tag waiting">Waiting for approval</b>}
+            </span>
+            <textarea className="comment" rows={7} value={comment} readOnly={locked} onChange={(e) => setComment(e.target.value)} />
           </label>
           <div className="result-actions">
-            <span className="mono hint">{comment.trim().split(/\s+/).filter(Boolean).length} words</span>
+            <span className={`mono hint ${over ? 'over' : ''}`}>
+              {comment.length} of {props.limit} characters
+            </span>
             <button
               className="pill ghost"
               onClick={async () => {
@@ -229,9 +242,21 @@ export function StudentDesk(props: {
             >
               Copy
             </button>
-            <button className="pill ink" disabled={isFinal} onClick={() => props.onSave({ ...s, final: comment })}>
-              {isFinal ? 'Marked final' : 'Mark final'}
-            </button>
+            {locked ? (
+              props.isAdmin && (
+                <button className="pill ghost" onClick={unlock}>
+                  Unlock for editing
+                </button>
+              )
+            ) : props.isAdmin ? (
+              <button className="pill ink" disabled={over} onClick={approve}>
+                Approve
+              </button>
+            ) : (
+              <button className="pill ink" disabled={over || (s.status === 'submitted' && !commentChanged)} onClick={submit}>
+                {s.status === 'submitted' && !commentChanged ? 'Sent for approval' : 'Send for approval'}
+              </button>
+            )}
           </div>
         </article>
       )}

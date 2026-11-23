@@ -336,3 +336,6 @@ textarea.comment:focus { outline: none; border-color: var(--ink); }
 .caret { display: inline-block; width: 2px; height: 1em; background: var(--ink); margin-left: 2px; vertical-align: -2px; animation: blink 1s steps(2) infinite; }
 @keyframes blink { 50% { opacity: 0; } }
 @media (prefers-reduced-motion: reduce) { .caret { animation: none; } }
+
+.final-tag.waiting { background: var(--peach); color: var(--sienna); }
+.hint.over { color: var(--danger); font-weight: 600; }

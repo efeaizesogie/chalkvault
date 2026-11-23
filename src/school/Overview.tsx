@@ -49,6 +49,8 @@ export function Overview() {
         </ol>
       )}
 
+      {isAdmin && <ApprovalQueue />}
+
       <section className="class-grid">
         {myClasses.map((c) => (
           <ClassCard key={c.id} schoolId={schoolId} cls={c} termId={term?.id ?? ''} />
@@ -73,6 +75,33 @@ export function Overview() {
         />
       )}
     </div>
+  );
+}
+
+/** Comments teachers have sent for approval this term, grouped by class. */
+function ApprovalQueue() {
+  const { schoolId, term, classes } = useSchool();
+  const waiting = useQuery<TermRecord>(
+    term ? query(paths.records(schoolId), where('termId', '==', term.id), where('status', '==', 'submitted')) : null,
+    `queue:${term?.id}`,
+  );
+  if (!waiting.data.length) return null;
+  const byClass = new Map<string, number>();
+  for (const r of waiting.data) byClass.set(r.classId, (byClass.get(r.classId) ?? 0) + 1);
+  return (
+    <section className="panel queue">
+      <h2 className="h3">
+        {waiting.data.length} comment{waiting.data.length === 1 ? '' : 's'} waiting for your approval
+      </h2>
+      <ul className="queue-list">
+        {[...byClass].map(([cid, n]) => (
+          <li key={cid}>
+            <Link to={`/s/${schoolId}/classes/${cid}`}>{classes.find((c) => c.id === cid)?.name ?? 'A class'}</Link>
+            <span className="muted">{n} waiting</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

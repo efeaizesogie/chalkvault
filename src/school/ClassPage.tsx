@@ -33,6 +33,7 @@ function merge(p: StudentProfile, r?: TermRecord): Student {
     draft: r?.draft,
     final: r?.final,
     translation: r?.translation,
+    status: r?.status,
     order: p.order,
   };
 }
@@ -73,6 +74,8 @@ export function ClassPage() {
       draft: s.draft,
       final: s.final,
       translation: s.translation,
+      status: s.status,
+      approvedBy: s.status === 'approved' ? me.uid : undefined,
     });
   };
 
@@ -163,6 +166,8 @@ export function ClassPage() {
         device={ws.device}
         busy={!!active && writer.busyIds.has(active.id)}
         live={active ? writer.live[active.id] : undefined}
+        isAdmin={isAdmin}
+        limit={school.commentLimit ?? 600}
         onSave={save}
         onWrite={writer.run}
         onLedger={() => {}}

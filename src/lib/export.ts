@@ -4,8 +4,9 @@ export const finalText = (s: Student) => s.final ?? s.draft?.comment ?? '';
 
 /** Students the batch button will write: undrafted ones first; if all are drafted, redo the non-final ones. */
 export function batchQueue(students: Student[]) {
-  const fresh = students.filter((s) => s.notes.trim() && !s.draft);
-  return fresh.length ? fresh : students.filter((s) => s.notes.trim() && !s.final);
+  const open = students.filter((s) => !s.status);
+  const fresh = open.filter((s) => s.notes.trim() && !s.draft);
+  return fresh.length ? fresh : open.filter((s) => s.notes.trim() && !s.final);
 }
 
 export function toCSV(cls: ClassRoom, students: Student[]) {
