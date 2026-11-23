@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { query, where } from 'firebase/firestore';
 import { paths, saveClass } from '../data/api';
 import { useQuery } from '../data/hooks';
-import { CLASS_COLOURS, type ClassRoom, type StudentProfile, type TermRecord } from '../data/types';
+import { CLASS_COLOURS, SUPPORT_LABEL, type ClassRoom, type StudentProfile, type TermRecord } from '../data/types';
 import { AddClassDialog } from '../components/AddClassDialog';
 import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
@@ -50,6 +50,7 @@ export function Overview() {
       )}
 
       {isAdmin && <ApprovalQueue />}
+      {isAdmin && <FollowUps />}
 
       <section className="class-grid">
         {myClasses.map((c) => (
@@ -98,6 +99,32 @@ function ApprovalQueue() {
           <li key={cid}>
             <Link to={`/s/${schoolId}/classes/${cid}`}>{classes.find((c) => c.id === cid)?.name ?? 'A class'}</Link>
             <span className="muted">{n} waiting</span>
+          </li>
+        ))}
+      </ul>
+    </section>
+  );
+}
+
+/** Students whose latest comment was flagged for follow-up (classified on the teacher's device or in the cloud). */
+function FollowUps() {
+  const { schoolId, term, classes } = useSchool();
+  const recs = useQuery<TermRecord>(term ? query(paths.records(schoolId), where('termId', '==', term.id)) : null, `followups:${term?.id}`);
+  const students = useQuery<StudentProfile>(paths.students(schoolId), `followups-names:${schoolId}`);
+  const names = new Map(students.data.map((s) => [s.id, s.name]));
+  const flagged = recs.data.filter((r) => r.draft?.supportFlag && r.draft.supportFlag !== 'none');
+  if (!flagged.length) return null;
+  return (
+    <section className="panel">
+      <h2 className="h3">
+        {flagged.length} student{flagged.length === 1 ? '' : 's'} may need follow-up
+      </h2>
+      <ul className="queue-list">
+        {flagged.map((r) => (
+          <li key={r.studentId}>
+            <Link to={`/s/${schoolId}/students/${r.studentId}`}>{names.get(r.studentId) ?? 'Student'}</Link>
+            <span className="muted">{classes.find((c) => c.id === r.classId)?.name}</span>
+            <span className="muted">{SUPPORT_LABEL[r.draft!.supportFlag!]}: {r.draft!.growthArea}</span>
           </li>
         ))}
       </ul>

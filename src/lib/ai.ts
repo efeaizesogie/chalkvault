@@ -2,7 +2,7 @@ import { getGenerativeModel, InferenceMode, InferenceSource, Schema, type Genera
 import { getFirebaseAI, SetupError } from './firebase';
 export { SetupError };
 import { redact, restore, STUDENT_TOKEN, type Redaction } from './redact';
-import type { Draft, Pronoun, Source } from '../data/types';
+import { SUPPORT_FLAGS, type Draft, type Pronoun, type Source, type SupportFlag } from '../data/types';
 
 // ---------- On-device status ----------
 
@@ -40,8 +40,9 @@ const draftJsonSchema = {
     growthArea: { type: 'string', description: 'One honest area to grow, phrased constructively.' },
     nextStep: { type: 'string', description: 'One concrete action for next term.' },
     comment: { type: 'string', description: 'The finished report comment, 3 to 4 sentences.' },
+    supportFlag: { type: 'string', enum: ['none', 'academic', 'attendance', 'wellbeing'], description: 'Whether the notes suggest the student needs follow-up.' },
   },
-  required: [...DRAFT_FIELDS],
+  required: [...DRAFT_FIELDS, 'supportFlag'],
   additionalProperties: false,
 };
 
@@ -52,8 +53,9 @@ const draftCloudSchema = Schema.object({
     growthArea: Schema.string(),
     nextStep: Schema.string(),
     comment: Schema.string(),
+    supportFlag: Schema.enumString({ enum: ['none', 'academic', 'attendance', 'wellbeing'] }),
   },
-  propertyOrdering: ['strength', 'growthArea', 'nextStep', 'comment'],
+  propertyOrdering: ['strength', 'growthArea', 'nextStep', 'comment', 'supportFlag'],
 });
 
 const alignCloudSchema = Schema.object({
@@ -225,7 +227,7 @@ function buildPrompt(r: CommentRequest, name: string, notes: string, withImage: 
     withImage ? 'A photo of the teacher\'s handwritten notes about this student is attached. Read it as part of the notes.' : '',
     r.facts ? `Facts from the school's records (use them accurately; do not change any number): ${r.facts}` : '',
     `Notes:\n"""\n${notes.slice(0, MAX_NOTES) || '(see photo)'}\n"""`,
-    `Return JSON with: strength (one full sentence: a specific strength from the notes), growthArea (one full sentence: an honest area to grow, phrased constructively), nextStep (one full sentence: a concrete thing to do next term), comment (3 to 4 sentences, under 90 words, written in the third person for parents to read, with no greeting, no sign-off and no praise that is not in the notes, refers to the student as ${name === STUDENT_TOKEN ? STUDENT_TOKEN : `"${name.split(/\s+/)[0]}"`}, weaving the three together).`,
+    `Return JSON with: strength (one full sentence: a specific strength from the notes), growthArea (one full sentence: an honest area to grow, phrased constructively), nextStep (one full sentence: a concrete thing to do next term), comment (3 to 4 sentences, under 90 words, written in the third person for parents to read, with no greeting, no sign-off and no praise that is not in the notes, refers to the student as ${name === STUDENT_TOKEN ? STUDENT_TOKEN : `"${name.split(/\s+/)[0]}"`}, weaving the three together), supportFlag (one of none, academic, attendance, wellbeing: the main kind of follow-up the notes suggest this student needs, or none).`,
   ]
     .filter(Boolean)
     .join('\n');
@@ -277,6 +279,7 @@ export async function writeComment(r: CommentRequest): Promise<CommentResult> {
       growthArea: fix(data.growthArea),
       nextStep: fix(data.nextStep),
       comment: fix(data.comment),
+      supportFlag: data.supportFlag,
       source,
       tone: r.tone,
       level: r.level,
@@ -293,7 +296,8 @@ function parseDraft(text: string) {
   const out = {} as Record<(typeof DRAFT_FIELDS)[number], string>;
   for (const f of DRAFT_FIELDS) out[f] = String(obj[f] ?? '').trim();
   if (!out.comment) throw new Error('The model returned an empty comment. Try again.');
-  return out;
+  const flag = String(obj.supportFlag ?? 'none') as SupportFlag;
+  return { ...out, supportFlag: (SUPPORT_FLAGS as readonly string[]).includes(flag) ? flag : 'none' };
 }
 
 // ---------- Register photo (on-device only) ----------

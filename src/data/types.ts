@@ -87,11 +87,17 @@ export interface StudentProfile {
   createdAt: number;
 }
 
+export const SUPPORT_FLAGS = ['none', 'academic', 'attendance', 'wellbeing'] as const;
+export type SupportFlag = (typeof SUPPORT_FLAGS)[number];
+export const SUPPORT_LABEL: Record<SupportFlag, string> = { none: 'No concerns', academic: 'Academic support', attendance: 'Attendance', wellbeing: 'Wellbeing' };
+
 export interface Draft {
   strength: string;
   growthArea: string;
   nextStep: string;
   comment: string;
+  /** On-device classification: does this student need follow-up? */
+  supportFlag?: SupportFlag;
   source: Source;
   tone: string;
   level: string;

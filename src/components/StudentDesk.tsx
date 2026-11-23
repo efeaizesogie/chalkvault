@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ClassRoom, LedgerEntry, Pronoun, Student } from '../data/types';
+import { SUPPORT_LABEL, type ClassRoom, type LedgerEntry, type Pronoun, type Student } from '../data/types';
 import { LEVELS, TONES, type DeviceStatus, type PartialDraft } from '../lib/ai';
 import type { Prefs } from '../ui/prefs';
 import { SourceStamp } from './SourceStamp';
@@ -207,6 +207,9 @@ export function StudentDesk(props: {
               {s.draft.tone}, {LEVELS.find((l) => l.id === s.draft!.level)?.label?.toLowerCase()}
             </span>
           </div>
+          {s.draft.supportFlag && s.draft.supportFlag !== 'none' && (
+            <p className="flag-note">Flagged for follow-up: {SUPPORT_LABEL[s.draft.supportFlag].toLowerCase()}. Admins see this on the overview.</p>
+          )}
           <dl className="parts">
             <div>
               <dt className="mono">Strength</dt>
