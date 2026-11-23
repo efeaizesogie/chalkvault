@@ -110,6 +110,7 @@ export function ClassPage() {
         onPrefs={ws.setPrefs}
         device={ws.device}
         busy={!!active && writer.busyIds.has(active.id)}
+        live={active ? writer.live[active.id] : undefined}
         onSave={save}
         onWrite={writer.run}
         onLedger={() => {}}

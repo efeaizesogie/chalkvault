@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { PrivacyBlock, writeComment } from '../lib/ai';
+import { PrivacyBlock, writeComment, type PartialDraft } from '../lib/ai';
 import { SetupError } from '../lib/firebase';
 import { friendlyError } from '../lib/errors';
 import { batchQueue } from '../lib/export';
@@ -18,9 +18,12 @@ export function useCommentWriter(opts: {
   addLedger: (e: Omit<LedgerEntry, 'id' | 'at' | 'uid'>) => Promise<void>;
   toast: (t: string, k?: 'info' | 'warn' | 'error') => void;
   onDeviceChanged: () => void;
+  /** Facts from the records (scores, attendance) to ground the comment. Never names. */
+  getFacts?: (s: Student) => string;
 }) {
   const [busyIds, setBusyIds] = useState<Set<string>>(new Set());
   const [batch, setBatch] = useState<{ done: number; total: number; current: string } | null>(null);
+  const [live, setLive] = useState<Record<string, { draft: PartialDraft; source: 'on_device' | 'in_cloud' }>>({});
   const stop = useRef(false);
   const o = useRef(opts);
   o.current = opts;
@@ -45,6 +48,8 @@ export function useCommentWriter(opts: {
         roster: students.map((x) => x.name),
         image,
         allowCloudFallback: prefs.allowCloudFallback,
+        facts: o.current.getFacts?.(s),
+        onPartial: (draft, source) => setLive((l) => ({ ...l, [s.id]: { draft, source } })),
       });
       await save({ ...s, draft: res.draft, final: undefined });
       await addLedger({
@@ -70,6 +75,11 @@ export function useCommentWriter(opts: {
         n.delete(s.id);
         return n;
       });
+      setLive((l) => {
+        const n = { ...l };
+        delete n[s.id];
+        return n;
+      });
       o.current.onDeviceChanged();
     }
   }, []);
@@ -93,5 +103,5 @@ export function useCommentWriter(opts: {
     o.current.toast(stop.current ? `Stopped after ${done} comments.` : `Wrote ${done} comment${done === 1 ? '' : 's'}.`);
   }, [run]);
 
-  return { run, runBatch, stopBatch: () => (stop.current = true), busyIds, batch };
+  return { run, runBatch, stopBatch: () => (stop.current = true), busyIds, batch, live };
 }

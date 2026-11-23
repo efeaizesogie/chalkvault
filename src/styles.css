@@ -330,3 +330,9 @@ textarea.comment:focus { outline: none; border-color: var(--ink); }
   .print-only h2 { font-weight: 400; font-size: 20px; margin: 0 0 6px; }
   .print-only article p { margin: 0; font-size: 15px; line-height: 1.55; }
 }
+
+/* ---------- Streaming comment ---------- */
+.stream-text { margin: 0; font: 400 18px/1.5 var(--serif); min-height: 3em; }
+.caret { display: inline-block; width: 2px; height: 1em; background: var(--ink); margin-left: 2px; vertical-align: -2px; animation: blink 1s steps(2) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+@media (prefers-reduced-motion: reduce) { .caret { animation: none; } }

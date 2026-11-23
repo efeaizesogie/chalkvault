@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ClassRoom, LedgerEntry, Pronoun, Student } from '../data/types';
-import { LEVELS, TONES, type DeviceStatus } from '../lib/ai';
+import { LEVELS, TONES, type DeviceStatus, type PartialDraft } from '../lib/ai';
 import type { Prefs } from '../ui/prefs';
 import { SourceStamp } from './SourceStamp';
 import { CloudTools } from './CloudTools';
@@ -15,6 +15,8 @@ export function StudentDesk(props: {
   onPrefs: (p: Partial<Prefs>) => void;
   device: DeviceStatus;
   busy: boolean;
+  /** The comment as it streams in, while busy. */
+  live?: { draft: PartialDraft; source: 'on_device' | 'in_cloud' };
   onSave: (s: Student) => Promise<void>;
   onWrite: (s: Student, image?: { base64: string; mimeType: 'image/jpeg' | 'image/png' }) => Promise<boolean>;
   onLedger: () => void;
@@ -169,7 +171,26 @@ export function StudentDesk(props: {
         </span>
       </div>
 
-      {props.busy && <div className="writing" aria-hidden><span /><span /><span /></div>}
+      {props.busy && (
+        <article className="result streaming" aria-live="polite">
+          <div className="result-top">
+            <SourceStamp source={props.live?.source ?? (props.device === 'available' ? 'on_device' : 'in_cloud')} />
+            <span className="mono meta">Writing…</span>
+          </div>
+          <dl className="parts">
+            {(['strength', 'growthArea', 'nextStep'] as const).map((k) => (
+              <div key={k}>
+                <dt className="mono">{{ strength: 'Strength', growthArea: 'Growth area', nextStep: 'Next step' }[k]}</dt>
+                <dd>{props.live?.draft[k] ?? <span className="muted">…</span>}</dd>
+              </div>
+            ))}
+          </dl>
+          <p className="stream-text">
+            {props.live?.draft.comment || <span className="muted">{props.live ? 'Putting the comment together…' : 'Reading the notes…'}</span>}
+            <span className="caret" aria-hidden />
+          </p>
+        </article>
+      )}
 
       {s.draft && !props.busy && (
         <article className="result">

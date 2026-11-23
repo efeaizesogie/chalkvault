@@ -53,6 +53,7 @@ const draftCloudSchema = Schema.object({
     nextStep: Schema.string(),
     comment: Schema.string(),
   },
+  propertyOrdering: ['strength', 'growthArea', 'nextStep', 'comment'],
 });
 
 const alignCloudSchema = Schema.object({
@@ -129,6 +130,49 @@ async function generate(kind: Kind, request: Parameters<GenerativeModel['generat
   throw last;
 }
 
+/**
+ * Streaming version: emits the text so far as it arrives (on-device or cloud).
+ * Retries and model fallback only happen before the first chunk, so nothing is duplicated.
+ */
+async function generateStream(kind: Kind, request: Parameters<GenerativeModel['generateContentStream']>[0], onText: (soFar: string) => void) {
+  let last: unknown;
+  for (const name of CLOUD_MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      let started = false;
+      try {
+        const res = await model(kind, name).generateContentStream(request);
+        let text = '';
+        for await (const chunk of res.stream) {
+          started = true;
+          text += chunk.text();
+          onText(text);
+        }
+        const final = await res.response;
+        return { text: text || final.text(), inferenceSource: final.inferenceSource };
+      } catch (e) {
+        last = e;
+        if (started) throw e;
+        if (isMissingModel(e)) break;
+        if (!isBusy(e)) throw e;
+        await sleep(1200 * (attempt + 1));
+      }
+    }
+  }
+  throw last;
+}
+
+export type PartialDraft = Partial<Record<(typeof DRAFT_FIELDS)[number], string>>;
+
+/** Pull the (possibly unfinished) fields out of streaming JSON, for a live preview. */
+export function partialDraft(json: string): PartialDraft {
+  const out: PartialDraft = {};
+  for (const f of DRAFT_FIELDS) {
+    const m = json.match(new RegExp('"' + f + '"\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)'));
+    if (m) out[f] = m[1].replace(/\\n/g, ' ').replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+  }
+  return out;
+}
+
 /** Start (or finish) the Gemini Nano download from a user click. */
 export async function downloadDeviceModel(onProgress: (p: number) => void) {
   await model('comment', CLOUD_MODELS[0]).initializeDeviceModel((p: number) => onProgress(p));
@@ -156,6 +200,10 @@ export interface CommentRequest {
   roster: string[];
   image?: { base64: string; mimeType: 'image/jpeg' | 'image/png' };
   allowCloudFallback: boolean;
+  /** Facts from the school's own records (scores, attendance). No names; safe on both paths. */
+  facts?: string;
+  /** Live preview of the comment as it streams in. */
+  onPartial?: (draft: PartialDraft, source: 'on_device' | 'in_cloud') => void;
 }
 
 export interface CommentResult {
@@ -175,6 +223,7 @@ function buildPrompt(r: CommentRequest, name: string, notes: string, withImage: 
     `Tone: ${r.tone}. Language: ${level.hint}.`,
     "The teacher's notes are rough private shorthand and may be blunt. Never repeat harsh or labelling words; reframe them kindly but honestly. Do not invent achievements, grades or events that are not in the notes. Never mention other students by name.",
     withImage ? 'A photo of the teacher\'s handwritten notes about this student is attached. Read it as part of the notes.' : '',
+    r.facts ? `Facts from the school's records (use them accurately; do not change any number): ${r.facts}` : '',
     `Notes:\n"""\n${notes.slice(0, MAX_NOTES) || '(see photo)'}\n"""`,
     `Return JSON with: strength (one full sentence: a specific strength from the notes), growthArea (one full sentence: an honest area to grow, phrased constructively), nextStep (one full sentence: a concrete thing to do next term), comment (3 to 4 sentences, under 90 words, written in the third person for parents to read, with no greeting, no sign-off and no praise that is not in the notes, refers to the student as ${name === STUDENT_TOKEN ? STUDENT_TOKEN : `"${name.split(/\s+/)[0]}"`}, weaving the three together).`,
   ]
@@ -210,14 +259,18 @@ export async function writeComment(r: CommentRequest): Promise<CommentResult> {
     parts.push({ type: 'text', text: prompt });
   }
 
-  const result = await generate('comment', parts);
-  const source: Source = result.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device';
+  const fix = (s: string) => (sent ? restore(s, r.name) : s);
+  const expected: 'on_device' | 'in_cloud' = local ? 'on_device' : 'in_cloud';
+  const result = await generateStream('comment', parts, (soFar) => {
+    const d = partialDraft(soFar);
+    r.onPartial?.(Object.fromEntries(Object.entries(d).map(([k, v]) => [k, fix(v ?? '')])) as PartialDraft, expected);
+  });
+  const source: Source = result.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device';
   if (local && source === 'in_cloud') {
     // Should be impossible (availability was checked), but never hide it if it happens.
     console.warn('Request was routed to the cloud despite on-device availability.');
   }
-  const data = parseDraft(result.response.text());
-  const fix = (s: string) => (sent ? restore(s, r.name) : s);
+  const data = parseDraft(result.text);
   return {
     draft: {
       strength: fix(data.strength),
