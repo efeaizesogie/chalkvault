@@ -1,0 +1,26 @@
+{
+  "name": "chalkvault",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Report-card comments written by on-device AI. Student names never leave the teacher's laptop.",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "firebase": "^13.4.0",
+    "idb": "^8.0.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.31",
+    "@types/react-dom": "^18.3.7",
+    "@vitejs/plugin-react": "^4.7.0",
+    "typescript": "5.6",
+    "vite": "^6.4.6"
+  }
+}
