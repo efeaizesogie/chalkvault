@@ -1,4 +1,4 @@
-﻿import {
+import {
   arrayRemove,
   arrayUnion,
   collection,

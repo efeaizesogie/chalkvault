@@ -42,7 +42,7 @@ export function Login() {
   };
 
   return (
-    <AuthShell eyebrow="Sign in" title="Welcome back to your school.">
+    <AuthShell title="Sign in to your school.">
       {sent ? (
         <div className="auth-card">
           <p className="h3">Check your inbox.</p>
@@ -71,7 +71,7 @@ export function Login() {
         </div>
       )}
       <p className="auth-foot">
-        New here? <Link to="/start">Register your school</Link> · or <Link to="/demo">try the demo school</Link>
+        New here? <Link to="/start">Register your school</Link> or <Link to="/demo">try the demo school</Link>.
       </p>
     </AuthShell>
   );

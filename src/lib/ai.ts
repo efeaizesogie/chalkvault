@@ -1,4 +1,4 @@
-﻿import { getGenerativeModel, InferenceMode, InferenceSource, Schema, type GenerativeModel, type Part } from 'firebase/ai';
+import { getGenerativeModel, InferenceMode, InferenceSource, Schema, type GenerativeModel, type Part } from 'firebase/ai';
 import { getFirebaseAI, SetupError } from './firebase';
 export { SetupError };
 import { redact, restore, STUDENT_TOKEN, type Redaction } from './redact';

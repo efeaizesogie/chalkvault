@@ -71,14 +71,8 @@ export function Landing() {
 
       <section className="lp-hero">
         <div className="lp-hero-copy">
-          <p className="mono eyebrow">School records · report comments · on-device AI</p>
-          <h1 className="lp-display">
-            Run your school’s records. Write every report comment. <em>Never hand a child’s name to an AI.</em>
-          </h1>
-          <p className="lede">
-            Chalkvault is a records system for schools, with classes, staff, student profiles and termly reports, and an AI writing assistant that runs inside
-            the teacher’s own browser.
-          </p>
+          <h1 className="lp-display">School records with a private AI.</h1>
+          <p className="lede">Classes, students and report comments, drafted on the teacher’s own laptop.</p>
           <div className="lp-hero-actions">
             <Link to="/start" className="ticket">
               Register your school
@@ -87,42 +81,32 @@ export function Landing() {
               Try the demo school
             </Link>
           </div>
-          <p className="mono muted small-caps">Free during the pilot · No card · Open source</p>
         </div>
         <HeroSheet />
       </section>
 
-      <section className="lp-band">
-        <div className="lp-stat">
-          <b>Hundreds</b>
-          <span>of comments a teacher writes each report season</span>
-        </div>
-        <div className="lp-stat">
-          <b>Pasted</b>
-          <span>into chatbots, names and all, because there’s no time</span>
-        </div>
-        <div className="lp-stat">
-          <b>Banned</b>
-          <span>by districts that can’t let student data reach outside AI tools</span>
-        </div>
+      <section className="lp-problem">
+        <p>
+          At report time a teacher writes a comment for every child. To keep up, many paste their notes, names and all, into a chatbot. Many schools and
+          districts now forbid it. Chalkvault gives teachers the same help without the child’s name ever reaching the AI.
+        </p>
       </section>
 
       <section className="lp-section" id="how">
-        <p className="mono eyebrow">How it works</p>
-        <h2 className="lp-h2">From a blank school to finished reports in an afternoon.</h2>
+        <h2 className="lp-h2">From a blank school to finished reports</h2>
         <ol className="lp-steps">
           <li>
-            <span className="mono">01</span>
+            <span className="step-no">1</span>
             <h3>Set up your school</h3>
             <p>Name it, pick your country, and Chalkvault suggests class levels, term names and subjects. Change anything.</p>
           </li>
           <li>
-            <span className="mono">02</span>
+            <span className="step-no">2</span>
             <h3>Invite staff, add students</h3>
             <p>Send teachers a private invite link and assign their classes. Paste a class list to create student records.</p>
           </li>
           <li>
-            <span className="mono">03</span>
+            <span className="step-no">3</span>
             <h3>Write and export reports</h3>
             <p>Teachers jot notes, Gemini Nano drafts each comment on their laptop, and you print or export the term’s reports.</p>
           </li>
@@ -131,7 +115,6 @@ export function Landing() {
 
       <section className="lp-section lp-privacy" id="privacy">
         <div>
-          <p className="mono eyebrow">Privacy, drawn out</p>
           <h2 className="lp-h2">The AI works with notes, never with names.</h2>
           <p className="lede">
             Records live in your school’s private space, and only staff you invite can open them. Writing comments happens on the teacher’s computer with Gemini
@@ -149,13 +132,12 @@ export function Landing() {
       </section>
 
       <section className="lp-section" id="features">
-        <p className="mono eyebrow">What’s inside</p>
-        <h2 className="lp-h2">Everything a school needs for report season, and the records behind it.</h2>
+        <h2 className="lp-h2">What’s inside</h2>
         <div className="lp-features">
           {FEATURES.map((f) => (
             <article key={f.title} className={`lp-feature ${f.soon ? 'soon' : ''}`}>
-              {f.soon && <span className="mono soon-tag">Coming soon</span>}
               <h3>{f.title}</h3>
+              {f.soon && <span className="soon-tag">Coming soon</span>}
               <p>{f.body}</p>
             </article>
           ))}
@@ -164,8 +146,7 @@ export function Landing() {
 
       <section className="lp-section lp-offline">
         <div className="lp-offline-card">
-          <p className="mono eyebrow">Works with the Wi-Fi off</p>
-          <h2 className="lp-h2">Report season doesn’t wait for the internet.</h2>
+          <h2 className="lp-h2">Works with the Wi-Fi off</h2>
           <p>
             Records are cached in the browser, and Gemini Nano runs locally, so a teacher can write a whole class’s comments with the Wi-Fi off. Changes sync
             when the connection comes back.
@@ -184,8 +165,7 @@ export function Landing() {
       </section>
 
       <section className="lp-section" id="faq">
-        <p className="mono eyebrow">Questions schools ask</p>
-        <h2 className="lp-h2">Straight answers.</h2>
+        <h2 className="lp-h2">Questions schools ask</h2>
         <div className="lp-faq">
           {FAQ.map((f) => (
             <details key={f.q}>
@@ -208,10 +188,10 @@ export function Landing() {
         </div>
       </section>
 
-      <footer className="foot mono">
-        <span>Chalkvault · built with Firebase AI Logic and Gemini Nano</span>
+      <footer className="foot">
+        <span>Chalkvault, built with Firebase AI Logic and Gemini Nano</span>
         <a href="https://github.com/efeaizesogie/chalkvault" target="_blank" rel="noreferrer">
-          Open source · Apache-2.0
+          Open source (Apache-2.0)
         </a>
       </footer>
     </div>
@@ -222,7 +202,7 @@ function HeroSheet() {
   return (
     <div className="hero-sheet" aria-label="Example: a class sheet with an on-device comment">
       <div className="hs-head">
-        <span className="mono">Mathematics · First term</span>
+        <span className="mono">Mathematics, first term</span>
         <b>Primary 5 Maths</b>
       </div>
       <ol className="hs-rows">
@@ -242,7 +222,7 @@ function HeroSheet() {
       </div>
       <div className="hs-comment">
         <span className="stamp device">
-          <i className="dot" /> On this device · 0 bytes sent
+          On this device, nothing sent
         </span>
         <p>
           Tunde built the strongest fractions model in our class project and explained it brilliantly to younger visitors. Handing homework in every week
@@ -257,21 +237,21 @@ function PrivacyDiagram() {
   return (
     <figure className="pd">
       <div className="pd-box device">
-        <span className="mono">Teacher’s laptop · Chrome</span>
+        <span className="mono">The teacher’s laptop, in Chrome</span>
         <b>Gemini Nano</b>
         <p>“Tunde Bakare: lazy, hw rarely in, best fractions model…”</p>
         <span className="stamp device">
-          <i className="dot" /> Names stay here
+          Names stay here
         </span>
       </div>
       <div className="pd-arrow" aria-hidden>
         <span className="mono">only placeholders cross</span>
       </div>
       <div className="pd-box cloud">
-        <span className="mono">Cloud · translation, standards</span>
+        <span className="mono">The cloud, for translation</span>
         <b>Gemini</b>
         <p>“[STUDENT] built the strongest fractions model in our class…”</p>
-        <span className="stamp cloud">↗ Names removed</span>
+        <span className="stamp cloud">Names removed</span>
       </div>
       <figcaption className="muted small">What the cloud receives when a teacher asks for a parent translation.</figcaption>
     </figure>

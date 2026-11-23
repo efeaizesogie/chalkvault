@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { CLASS_COLOURS, type ClassColour, type ClassRoom } from '../data/types';
 import { uid } from '../data/api';
 
@@ -34,7 +34,6 @@ export function AddClassDialog(props: {
   return (
     <div className="scrim" onClick={props.onClose}>
       <form className="dialog" onClick={(e) => e.stopPropagation()} onSubmit={submit}>
-        <p className="mono eyebrow">{i ? 'Edit class' : 'New class'}</p>
         <h2 className="h2">{i ? i.name : 'Add a class'}</h2>
         <label className="field">
           <span className="mono">Class name</span>

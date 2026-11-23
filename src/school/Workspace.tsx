@@ -33,9 +33,9 @@ export function Workspace() {
         s === 'loading' ? (
           <div className="boot">Opening your school…</div>
         ) : (
-          <AuthShell eyebrow="No access" title="You’re not a member of this school.">
+          <AuthShell title="You’re not a member of this school.">
             <div className="auth-card">
-              <p className="muted">Ask the school's owner for an invite link, or pick another school.</p>
+              <p className="muted">Ask the school’s owner for an invite link, or pick another school.</p>
               <Link to="/schools" className="ticket">
                 My schools
               </Link>
@@ -142,7 +142,7 @@ function Frame() {
       {school.demo && (
         <div className="demo-banner">
           <span className="mono">Demo school</span> Students and notes are made up. Everything you do here is private to this browser.{' '}
-          <Link to="/start">Register your real school →</Link>
+          <Link to="/start">Register your real school</Link>
         </div>
       )}
 

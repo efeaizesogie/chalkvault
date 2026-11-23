@@ -1,4 +1,4 @@
-﻿import type { LedgerEntry } from '../data/types';
+import type { LedgerEntry } from '../data/types';
 import { SourceStamp } from './SourceStamp';
 
 export function Ledger({ entries, onClose, onClear }: { entries: LedgerEntry[]; onClose: () => void; onClear?: () => Promise<void> }) {
@@ -10,8 +10,8 @@ export function Ledger({ entries, onClose, onClear }: { entries: LedgerEntry[]; 
       <aside className="drawer" onClick={(e) => e.stopPropagation()} aria-label="Request ledger">
         <header className="drawer-head">
           <div>
-            <p className="mono eyebrow">Ledger</p>
-            <h2 className="h2">Every AI request, and where it ran.</h2>
+            <h2 className="h2">Ledger</h2>
+            <p className="muted small">Every AI request, where it ran, and what left the device.</p>
           </div>
           <button className="pill ghost" onClick={onClose}>
             Close

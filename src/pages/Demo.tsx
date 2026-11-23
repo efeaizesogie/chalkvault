@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 import { addStudents, createSchool, getUserSchools, saveRecord, saveStudent } from '../data/api';
@@ -59,10 +59,10 @@ export function Demo() {
   }, [ready, user, signInDemo, nav]);
 
   return (
-    <AuthShell eyebrow="Demo school" title="One moment.">
+    <AuthShell title="Opening the demo school.">
       <div className="auth-card">
         <p className="muted">{status}</p>
-        <p className="small muted">The demo uses made-up students. It's private to this browser and you can delete it any time from Settings.</p>
+        <p className="small muted">The demo uses made-up students. It’s private to this browser and you can delete it any time from Settings.</p>
       </div>
     </AuthShell>
   );

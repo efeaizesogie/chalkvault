@@ -24,7 +24,6 @@ export function Overview() {
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="mono eyebrow">{term?.name ?? 'This term'}</p>
           <h1 className="display-sm">Good to see you{first ? `, ${first}` : ''}.</h1>
           <p className="lede">
             {isAdmin
@@ -94,10 +93,10 @@ function ClassCard({ schoolId, cls, termId }: { schoolId: string; cls: ClassRoom
       <span className="mono">{cls.subject || cls.level}</span>
       <span className="class-card-name">{cls.name}</span>
       <span className="class-card-meta mono">
-        {total} students · {drafted} drafted · {finals} final
+        {total} students, {drafted} drafted, {finals} final
       </span>
       <span className="class-card-bar" aria-hidden>
-        <i style={{ width: total ? `${(finals / total) * 100}%` : 0, background: col.ink }} />
+        <i style={{ transform: `scaleX(${total ? finals / total : 0})`, background: col.ink }} />
       </span>
     </Link>
   );

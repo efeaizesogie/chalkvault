@@ -46,7 +46,6 @@ export function DeviceChip(props: {
   return (
     <div className="device-wrap" ref={ref}>
       <button className={`device-chip ${ok ? 'ok' : 'off'}`} onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        <i className="dot" />
         <span className="mono">{LABEL[status]}</span>
       </button>
       {open && (

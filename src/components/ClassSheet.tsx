@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { CLASS_COLOURS, type ClassRoom, type Student } from '../data/types';
 import type { DeviceStatus } from '../lib/ai';
 import { batchQueue, download, finalText, slug, toCSV, toPlain } from '../lib/export';
@@ -57,11 +57,11 @@ export function ClassSheet(props: {
     <section className="sheet" aria-label={`${cls.name} class sheet`}>
       <header className="sheet-head" style={{ background: col.bg, color: col.ink }}>
         <div className="sheet-title">
-          <p className="mono eyebrow">
-            {cls.subject || cls.level || 'Class'}
-            {props.termName ? ` · ${props.termName}` : ''}
-          </p>
           <h1 className="display-sm">{cls.name}</h1>
+          <p className="sheet-sub">
+            {cls.subject || cls.level || 'Class'}
+            {props.termName ? `, ${props.termName}` : ''}
+          </p>
         </div>
         {props.onEditClass && (
           <button className="link on-colour" onClick={props.onEditClass} style={{ color: col.ink }}>
@@ -90,7 +90,7 @@ export function ClassSheet(props: {
           ) : (
             <button className="pill ink" onClick={props.onBatch} disabled={!withNotes}>
               Write {withNotes || ''} comment{withNotes === 1 ? '' : 's'}
-              <span className="pill-sub mono">{props.device === 'available' ? 'on-device · $0' : 'names removed'}</span>
+              <span className="pill-sub mono">{props.device === 'available' ? 'on this device' : 'names removed'}</span>
             </button>
           )}
           <div className="menu-wrap">
@@ -124,9 +124,9 @@ export function ClassSheet(props: {
 
       {batch && (
         <div className="batch-bar" role="progressbar" aria-valuemin={0} aria-valuemax={batch.total} aria-valuenow={batch.done}>
-          <div className="batch-fill" style={{ width: `${(batch.done / batch.total) * 100}%` }} />
+          <div className="batch-fill" style={{ transform: `scaleX(${batch.done / batch.total})` }} />
           <span className="mono">
-            Writing {batch.done + 1} of {batch.total} · {batch.current}
+            Writing {batch.done + 1} of {batch.total}: {batch.current}
           </span>
         </div>
       )}

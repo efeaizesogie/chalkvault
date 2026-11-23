@@ -34,14 +34,14 @@ export function Join() {
   };
 
   return (
-    <AuthShell eyebrow="Invitation" title={invite === 'missing' ? 'This invite has expired.' : 'You’ve been invited to a school.'}>
+    <AuthShell title={invite === 'missing' ? 'This invite has expired.' : 'You’ve been invited to a school.'}>
       <div className="auth-card">
         {invite === null && <p className="muted">Checking the invite…</p>}
-        {invite === 'missing' && <p className="muted">Ask the person who invited you for a new link. Invites stop working once they're revoked.</p>}
+        {invite === 'missing' && <p className="muted">Ask the person who invited you for a new link. Invites stop working once they’re revoked.</p>}
         {invite && invite !== 'missing' && (
           <>
             <p>
-              You'll join as <b>{invite.role === 'admin' ? 'an admin' : 'a teacher'}</b>
+              You’ll join as <b>{invite.role === 'admin' ? 'an admin' : 'a teacher'}</b>
               {invite.classIds.length ? ` with ${invite.classIds.length} class${invite.classIds.length === 1 ? '' : 'es'} assigned` : ''}, signed in as{' '}
               <b>{user.email}</b>.
             </p>

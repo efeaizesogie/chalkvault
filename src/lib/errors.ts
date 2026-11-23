@@ -1,4 +1,4 @@
-﻿/** Turn SDK/network errors into one short sentence a teacher can act on. */
+/** Turn SDK/network errors into one short sentence a teacher can act on. */
 export function friendlyError(e: unknown) {
   const m = (e as Error)?.message ?? String(e);
   if (/app-check|appCheck|App Check|\b401\b/i.test(m)) return 'App Check rejected this browser. Register the debug token (localhost) or check the reCAPTCHA domain list.';

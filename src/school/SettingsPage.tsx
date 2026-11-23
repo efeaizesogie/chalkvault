@@ -35,15 +35,15 @@ export function SettingsPage() {
     const id = await addTerm(schoolId, newTerm.trim(), terms.length + 1);
     await updateSchool(schoolId, { currentTermId: id });
     setNewTerm('');
-    toast(`${newTerm.trim()} is now the current term. Earlier terms' comments are kept on each student's record.`);
+    toast(`${newTerm.trim()} is now the current term. Earlier terms’ comments are kept on each student's record.`);
   };
 
   return (
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="mono eyebrow">Settings</p>
-          <h1 className="display-sm">{school.name}</h1>
+          <h1 className="display-sm">Settings</h1>
+          <p className="lede">{school.name}</p>
         </div>
         <button className="ticket" onClick={saveDetails}>
           Save details
@@ -121,8 +121,8 @@ export function SettingsPage() {
         <section className="panel wide danger-zone">
           <h2 className="h3">Your data</h2>
           <p className="muted small">
-            Records are stored in this school's private space in Firebase. Only staff you invite can open them, and teachers only see their own classes. The AI never
-            receives a student's name.
+            Records are stored in this school’s private space in Firebase. Only staff you invite can open them, and teachers only see their own classes. The AI never
+            receives a student’s name.
           </p>
           {me.role === 'owner' && (
             <button

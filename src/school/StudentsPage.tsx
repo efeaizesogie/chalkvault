@@ -13,8 +13,8 @@ export function StudentsPage() {
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="mono eyebrow">Student records</p>
-          <h1 className="display-sm">{isAdmin ? 'Every student, by class.' : 'Your students.'}</h1>
+          <h1 className="display-sm">Students</h1>
+          <p className="lede">{isAdmin ? 'Every student record in the school, grouped by class.' : 'Students in the classes you teach.'}</p>
         </div>
         <label className="field search">
           <span className="mono">Find a student</span>
@@ -40,7 +40,7 @@ function ClassStudents({ cls, q }: { cls: ClassRoom; q: string }) {
   return (
     <section className="roster">
       <h2 className="roster-head">
-        <i className="swatch-dot" style={{ ['--c' as string]: col.bg }} /> {cls.name}
+        <span className="swatch-dot" style={{ ['--c' as string]: col.bg }} aria-hidden /> {cls.name}
         <span className="mono muted">{s.data.length} students</span>
       </h2>
       <ol className="rows">
@@ -49,7 +49,7 @@ function ClassStudents({ cls, q }: { cls: ClassRoom; q: string }) {
             <Link to={`/s/${schoolId}/students/${x.id}`} className="row record-row">
               <span className="row-name">{x.name}</span>
               <span className="mono muted">{x.admissionNo || '—'}</span>
-              <span className="muted small">{x.guardians[0] ? `${x.guardians[0].name} · ${x.guardians[0].language || 'English'}` : 'No guardian added'}</span>
+              <span className="muted small">{x.guardians[0] ? `${x.guardians[0].name}, reads in ${x.guardians[0].language || 'English'}` : 'No guardian added'}</span>
               <span className="mono row-status">Open</span>
             </Link>
           </li>

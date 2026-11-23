@@ -19,7 +19,7 @@ export function Schools() {
   if (list && entries.length === 1) return <Navigate to={`/s/${entries[0][0]}`} replace />;
 
   return (
-    <AuthShell eyebrow={user.email ?? 'Signed in'} title={entries.length ? 'Choose a school.' : 'You’re not in a school yet.'}>
+    <AuthShell note={user.email ? `Signed in as ${user.email}` : undefined} title={entries.length ? 'Choose a school.' : 'You’re not in a school yet.'}>
       <div className="auth-card">
         {!list && <p className="muted">Loading your schools…</p>}
         {entries.length > 0 && (

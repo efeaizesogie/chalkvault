@@ -40,8 +40,7 @@ export function StaffPage() {
     <div className="page">
       <header className="page-head">
         <div>
-          <p className="mono eyebrow">Staff</p>
-          <h1 className="display-sm">Who can open {school.name}.</h1>
+          <h1 className="display-sm">Staff</h1>
           <p className="lede">Teachers only see the classes you assign them. Owners and admins see everything.</p>
         </div>
       </header>
@@ -63,12 +62,12 @@ export function StaffPage() {
         </div>
         {role === 'teacher' && (
           <div className="field">
-            <span className="mono">Classes they'll teach</span>
+            <span className="mono">Classes they’ll teach</span>
             <ClassChips selected={inviteClasses} onToggle={(id) => setInviteClasses((x) => (x.includes(id) ? x.filter((y) => y !== id) : [...x, id]))} />
           </div>
         )}
         <div className="row-actions">
-          <span className="muted small">You'll get a private link to send. Whoever opens it and signs in joins with this role.</span>
+          <span className="muted small">You’ll get a private link to send. Whoever opens it and signs in joins with this role.</span>
           <button className="ticket" onClick={create} disabled={busy}>
             Create invite link
           </button>

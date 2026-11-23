@@ -53,7 +53,7 @@ export function Start() {
   };
 
   return (
-    <AuthShell eyebrow={`Register your school · step ${step + 1} of 3`} title={['Name your school.', 'Shape your year.', 'Add your first classes.'][step]} wide>
+    <AuthShell note={`Step ${step + 1} of 3`} title={['Name your school', 'Set up your school year', 'Add your first classes'][step]} wide>
       <div className="auth-card wizard">
         {step === 0 && (
           <>
@@ -71,7 +71,7 @@ export function Start() {
               <small className="muted">Sets sensible class levels, term names and subjects. You can change all of them.</small>
             </label>
             <p className="muted small">
-              You'll be the school's <b>owner</b>, signed in as {user.email}. You can invite teachers and other admins next.
+              You’ll be the school’s <b>owner</b>, signed in as {user.email}. You can invite teachers and other admins next.
             </p>
           </>
         )}
@@ -119,7 +119,7 @@ export function Start() {
                 placeholder={`${levels[0] ?? 'Year 1'} A\n${levels[0] ?? 'Year 1'} B\n${levels[1] ?? 'Year 2'} A`}
                 autoFocus
               />
-              <small className="muted">You can add students to each class once you're in.</small>
+              <small className="muted">You can add students to each class once you’re in.</small>
             </label>
           </>
         )}

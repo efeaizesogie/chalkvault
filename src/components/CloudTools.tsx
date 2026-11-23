@@ -1,4 +1,4 @@
-﻿import { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { LedgerEntry, Student } from '../data/types';
 import { alignToStandards, LANGUAGES, prepareOutbound, SetupError, translateTemplate } from '../lib/ai';
 import { restore } from '../lib/redact';
@@ -35,7 +35,7 @@ export function CloudTools(props: {
         const r = await translateTemplate(outbound.text, language);
         const text = restore(r.text, s.name); // the real name goes back in locally
         await props.onSave({ ...s, translation: { language, text, at: Date.now() } });
-        await props.addLedger({ task: `Parent translation · ${language}`, source: 'in_cloud', charsSent: r.prompt.length, detail: r.prompt });
+        await props.addLedger({ task: `Parent translation (${language})`, source: 'in_cloud', charsSent: r.prompt.length, detail: r.prompt });
         setLastMs(r.ms);
       } else {
         const r = await alignToStandards(outbound.text, framework);
@@ -54,7 +54,8 @@ export function CloudTools(props: {
   return (
     <section className="cloud">
       <header className="cloud-head">
-        <p className="mono eyebrow">Cloud helpers · names removed first</p>
+        <h3 className="h3">Cloud helpers</h3>
+        <p className="muted small">Names are removed on this device before anything is sent.</p>
         <div className="cloud-buttons">
           <button className={`pill ghost ${task === 'translate' ? 'on' : ''}`} onClick={() => setTask(task === 'translate' ? null : 'translate')}>
             Translate for parents
@@ -144,7 +145,7 @@ export function CloudTools(props: {
         <div className="cloud-result">
           <div className="result-top">
             <SourceStamp source="in_cloud" ms={lastMs} />
-            <span className="mono meta">For parents · {s.translation.language}</span>
+            <span className="mono meta">For parents, in {s.translation.language}</span>
           </div>
           <p lang={langCode(s.translation.language)}>{s.translation.text}</p>
           <div className="result-actions">

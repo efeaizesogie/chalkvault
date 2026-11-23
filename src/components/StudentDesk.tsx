@@ -1,4 +1,4 @@
-﻿import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ClassRoom, LedgerEntry, Pronoun, Student } from '../data/types';
 import { LEVELS, TONES, type DeviceStatus } from '../lib/ai';
 import type { Prefs } from '../ui/prefs';
@@ -51,7 +51,6 @@ export function StudentDesk(props: {
   if (!s)
     return (
       <aside className="desk desk-empty">
-        <p className="mono eyebrow">Student</p>
         <p className="lede">Add students to this class, then pick one to write their comment.</p>
       </aside>
     );
@@ -85,7 +84,6 @@ export function StudentDesk(props: {
     <aside className="desk" aria-label={`${s.name}`}>
       <header className="desk-head">
         <div>
-          <p className="mono eyebrow">Student</p>
           <h2 className="display-xs">{s.name}</h2>
         </div>
         <div className="seg" role="radiogroup" aria-label="Pronouns">
@@ -123,14 +121,14 @@ export function StudentDesk(props: {
         {img ? (
           <div className="photo-chip">
             <img src={img.url} alt="Handwritten notes" />
-            <span>Photo of notes · read on-device only</span>
+            <span>Photo of notes, read on this device only</span>
             <button className="link" onClick={() => setImg(null)}>
               Remove
             </button>
           </div>
         ) : (
           <button className="link" onClick={() => fileRef.current?.click()}>
-            + Add a photo of handwritten notes
+            Add a photo of notes
           </button>
         )}
       </div>
@@ -178,7 +176,7 @@ export function StudentDesk(props: {
           <div className="result-top">
             <SourceStamp source={s.draft.source} />
             <span className="mono meta">
-              {s.draft.tone} · {LEVELS.find((l) => l.id === s.draft!.level)?.label}
+              {s.draft.tone}, {LEVELS.find((l) => l.id === s.draft!.level)?.label?.toLowerCase()}
             </span>
           </div>
           <dl className="parts">

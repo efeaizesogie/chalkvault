@@ -1,4 +1,4 @@
-﻿import type { ClassRoom, Student } from '../data/types';
+import type { ClassRoom, Student } from '../data/types';
 
 export const finalText = (s: Student) => s.final ?? s.draft?.comment ?? '';
 
@@ -23,7 +23,7 @@ export function toCSV(cls: ClassRoom, students: Student[]) {
       s.translation ? `${s.translation.language}: ${s.translation.text}` : '',
     ]),
   ];
-  return '﻿' + rows.map((r) => r.map(q).join(',')).join('\r\n');
+  return '' + rows.map((r) => r.map(q).join(',')).join('\r\n');
 }
 
 export function download(filename: string, content: string, type = 'text/csv;charset=utf-8') {

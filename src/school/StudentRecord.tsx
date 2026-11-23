@@ -50,10 +50,11 @@ export function StudentRecord() {
     <div className="page record">
       <header className="page-head">
         <div>
-          <p className="mono eyebrow">
-            <Link to={`/s/${schoolId}/students`}>Students</Link> / {cls?.name ?? 'No class'}
-          </p>
           <h1 className="display-sm">{p.name}</h1>
+          <p className="lede">
+            {cls?.name ?? 'No class'}
+            {p.admissionNo ? `, admission no. ${p.admissionNo}` : ''}
+          </p>
         </div>
         <div className="head-actions">
           <button className="pill ghost" onClick={() => window.print()}>
@@ -151,7 +152,7 @@ export function StudentRecord() {
 
         <section className="panel wide">
           <h2 className="h3">Reports by term</h2>
-          {sorted.length === 0 && <p className="muted small">No notes or comments yet. Open the class to write this term's comment.</p>}
+          {sorted.length === 0 && <p className="muted small">No notes or comments yet. Open the class to write this term’s comment.</p>}
           {sorted.map((r) => (
             <article key={r.termId} className="term-report">
               <div className="term-report-head">
@@ -174,7 +175,7 @@ export function StudentRecord() {
           ))}
           {cls && (
             <Link to={`/s/${schoolId}/classes/${cls.id}`} className="link">
-              Open {cls.name} to write comments →
+              Write comments in {cls.name}
             </Link>
           )}
         </section>
@@ -196,7 +197,7 @@ export function StudentRecord() {
       <div className="print-only report-card">
         <h1>{school.name}</h1>
         <p>
-          {p.name} · {cls?.name} · {p.admissionNo}
+          {p.name}, {cls?.name}{p.admissionNo ? `, ${p.admissionNo}` : ''}
         </p>
         {sorted
           .filter((r) => r.final || r.draft)
