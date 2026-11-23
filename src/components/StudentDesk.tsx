@@ -31,6 +31,15 @@ export function StudentDesk(props: {
   // Keep local edits in sync when the stored draft changes (e.g. after batch writing).
   useEffect(() => setComment(s?.final ?? s?.draft?.comment ?? ''), [s?.draft?.updatedAt, s?.final]);
 
+  // Notes can arrive after the desk opens (records load from Firestore) or change on another device.
+  // Take the stored notes unless the teacher has unsaved typing in the box.
+  const lastStored = useRef(s?.notes ?? '');
+  useEffect(() => {
+    const stored = s?.notes ?? '';
+    setNotes((cur) => (cur === lastStored.current ? stored : cur));
+    lastStored.current = stored;
+  }, [s?.notes]);
+
   // Autosave notes locally.
   useEffect(() => {
     if (!s || notes === s.notes) return;
