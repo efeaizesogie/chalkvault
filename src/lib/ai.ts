@@ -61,9 +61,6 @@ const alignCloudSchema = Schema.object({
   },
 });
 
-let commentModel: GenerativeModel | null = null;
-let cloudJsonModel: GenerativeModel | null = null;
-let cloudTextModel: GenerativeModel | null = null;
 
 function ai() {
   const a = getFirebaseAI();
@@ -78,39 +75,67 @@ export class SetupError extends Error {
 }
 export class PrivacyBlock extends Error {}
 
-/** Hybrid model: Gemini Nano in Chrome when available, Gemini in the cloud otherwise. */
-function getCommentModel() {
-  commentModel ??= getGenerativeModel(ai(), {
-    mode: InferenceMode.PREFER_ON_DEVICE,
-    onDeviceParams: { createOptions, promptOptions: { responseConstraint: draftJsonSchema } },
-    inCloudParams: {
-      model: 'gemini-3.5-flash-lite',
-      generationConfig: { responseMimeType: 'application/json', responseSchema: draftCloudSchema, temperature: 0.6 },
-    },
-  });
-  return commentModel;
+// Cloud models, in order. If the first is overloaded, the next one is tried.
+const CLOUD_MODELS = ['gemini-3.5-flash-lite', 'gemini-3.5-flash'];
+type Kind = 'comment' | 'json' | 'text';
+const models = new Map<string, GenerativeModel>();
+
+function model(kind: Kind, cloudModel: string): GenerativeModel {
+  const key = `${kind}:${cloudModel}`;
+  let m = models.get(key);
+  if (m) return m;
+  if (kind === 'comment') {
+    /** Hybrid model: Gemini Nano in Chrome when available, Gemini in the cloud otherwise. */
+    m = getGenerativeModel(ai(), {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      onDeviceParams: { createOptions, promptOptions: { responseConstraint: draftJsonSchema } },
+      inCloudParams: {
+        model: cloudModel,
+        generationConfig: { responseMimeType: 'application/json', responseSchema: draftCloudSchema, temperature: 0.6 },
+      },
+    });
+  } else {
+    m = getGenerativeModel(ai(), {
+      mode: InferenceMode.ONLY_IN_CLOUD,
+      inCloudParams: {
+        model: cloudModel,
+        generationConfig:
+          kind === 'json'
+            ? { responseMimeType: 'application/json', responseSchema: alignCloudSchema, temperature: 0.3 }
+            : { temperature: 0.3 },
+      },
+    });
+  }
+  models.set(key, m);
+  return m;
 }
-function getCloudJson() {
-  cloudJsonModel ??= getGenerativeModel(ai(), {
-    mode: InferenceMode.ONLY_IN_CLOUD,
-    inCloudParams: {
-      model: 'gemini-3.5-flash-lite',
-      generationConfig: { responseMimeType: 'application/json', responseSchema: alignCloudSchema, temperature: 0.3 },
-    },
-  });
-  return cloudJsonModel;
-}
-function getCloudText() {
-  cloudTextModel ??= getGenerativeModel(ai(), {
-    mode: InferenceMode.ONLY_IN_CLOUD,
-    inCloudParams: { model: 'gemini-3.5-flash-lite', generationConfig: { temperature: 0.3 } },
-  });
-  return cloudTextModel;
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+const msgOf = (e: unknown) => (e as Error)?.message ?? String(e);
+const isBusy = (e: unknown) => /\b(500|503|429)\b|high demand|overloaded|UNAVAILABLE|RESOURCE_EXHAUSTED/i.test(msgOf(e));
+const isMissingModel = (e: unknown) => /\b404\b|not found|is not supported/i.test(msgOf(e));
+
+/** Call the model, retrying briefly when the cloud is busy and falling back to the next cloud model. */
+async function generate(kind: Kind, request: Parameters<GenerativeModel['generateContent']>[0]) {
+  let last: unknown;
+  for (const name of CLOUD_MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await model(kind, name).generateContent(request);
+      } catch (e) {
+        last = e;
+        if (isMissingModel(e)) break;
+        if (!isBusy(e)) throw e;
+        await sleep(1200 * (attempt + 1));
+      }
+    }
+  }
+  throw last;
 }
 
 /** Start (or finish) the Gemini Nano download from a user click. */
 export async function downloadDeviceModel(onProgress: (p: number) => void) {
-  await getCommentModel().initializeDeviceModel((p: number) => onProgress(p));
+  await model('comment', CLOUD_MODELS[0]).initializeDeviceModel((p: number) => onProgress(p));
 }
 
 // ---------- Comment writing ----------
@@ -189,7 +214,7 @@ export async function writeComment(r: CommentRequest): Promise<CommentResult> {
     parts.push({ type: 'text', text: prompt });
   }
 
-  const result = await getCommentModel().generateContent(parts);
+  const result = await generate('comment', parts);
   const source: Source = result.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device';
   if (local && source === 'in_cloud') {
     // Should be impossible (availability was checked), but never hide it if it happens.
@@ -238,7 +263,7 @@ export async function translateTemplate(deidentified: string, language: string) 
     'Return only the translation.',
     `"""\n${deidentified}\n"""`,
   ].join('\n');
-  const res = await getCloudText().generateContent(prompt);
+  const res = await generate('text', prompt);
   return { text: res.response.text().trim(), prompt, ms: performance.now() - t0 };
 }
 
@@ -250,7 +275,7 @@ export async function alignToStandards(deidentified: string, framework: string) 
     'Return JSON: comment (the revised comment) and standards (2 to 3 short references to the standards you aligned to, e.g. a code and a few words).',
     `"""\n${deidentified}\n"""`,
   ].join('\n');
-  const res = await getCloudJson().generateContent(prompt);
+  const res = await generate('json', prompt);
   const obj = JSON.parse(res.response.text()) as { comment?: string; standards?: string[] };
   return { comment: String(obj.comment ?? ''), standards: obj.standards ?? [], prompt, ms: performance.now() - t0 };
 }
