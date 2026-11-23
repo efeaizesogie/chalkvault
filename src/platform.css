@@ -252,3 +252,22 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
   .att-row.row-head { display: none; }
   .att-actions { margin-left: 0; }
 }
+
+/* ---------- Gradebook ---------- */
+.scores { background: var(--sheet); }
+.table-wrap { overflow-x: auto; }
+.gradebook { width: 100%; border-collapse: collapse; }
+.gradebook th, .gradebook td { padding: 8px 12px; border-bottom: 1px solid var(--rule); text-align: left; font-weight: 400; }
+.gradebook thead th { font-size: 13px; font-weight: 500; color: var(--ink-2); border-bottom: 1px solid var(--ink); white-space: nowrap; }
+.gradebook .num { text-align: right; }
+.gradebook .gb-name { font: 400 18px/1.2 var(--serif); white-space: nowrap; }
+.gradebook input { width: 64px; text-align: right; border: 1px solid var(--rule); border-radius: 10px; padding: 6px 8px; background: var(--paper); font-variant-numeric: tabular-nums; }
+.gradebook input:focus { border-color: var(--ink); outline: none; box-shadow: 0 0 0 2px var(--ticket); }
+.gb-total { font-weight: 600; font-variant-numeric: tabular-nums; }
+@media print {
+  .class-tabs, .att-bar, .table-wrap { display: none !important; }
+  .broadsheet h1 { font: 400 28px var(--serif); margin: 0; }
+  .broadsheet > p { margin: 4px 0 16px; color: var(--print-ink-2); }
+  .broadsheet table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .broadsheet th, .broadsheet td { border: 1px solid var(--print-rule); padding: 4px 6px; text-align: left; }
+}

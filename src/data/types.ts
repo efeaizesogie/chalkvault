@@ -24,6 +24,12 @@ export interface School {
   colour: ClassColour;
   demo?: boolean;
   createdAt: number;
+  /** Score components, e.g. CA 1 (20), CA 2 (20), Exam (60). */
+  assessments?: { key: string; label: string; max: number }[];
+  /** Grade bands by percentage, highest first. */
+  gradeBands?: { grade: string; min: number; remark: string }[];
+  /** Maximum characters for a report comment. */
+  commentLimit?: number;
 }
 
 export interface Member {
@@ -102,6 +108,8 @@ export interface TermRecord {
   draft?: Draft;
   final?: string;
   translation?: { language: string; text: string; at: number };
+  /** Scores by assessment key. */
+  scores?: Record<string, number>;
   updatedAt: number;
   updatedBy: string;
 }

@@ -3,7 +3,7 @@ import { Navigate, useOutletContext, useParams, useSearchParams } from 'react-ro
 import { query, where } from 'firebase/firestore';
 import { addStudents, deleteStudent, paths, saveClass, deleteClass, saveRecord, saveStudent } from '../data/api';
 import { useQuery } from '../data/hooks';
-import type { Student, StudentProfile, TermRecord } from '../data/types';
+import type { AttendanceDay, Student, StudentProfile, TermRecord } from '../data/types';
 import { ClassSheet } from '../components/ClassSheet';
 import { StudentDesk } from '../components/StudentDesk';
 import { AddClassDialog } from '../components/AddClassDialog';
@@ -12,11 +12,14 @@ import { useSchool } from './SchoolContext';
 import { useCommentWriter } from './useCommentWriter';
 import type { WorkspaceCtx } from './Workspace';
 import { AttendanceView } from './AttendanceView';
+import { ScoresView } from './ScoresView';
+import { assessmentsOf, bandsOf, computeResults, ordinal } from '../lib/results';
 
 type Tab = 'comments' | 'attendance' | 'scores';
 const TABS: { id: Tab; label: string }[] = [
   { id: 'comments', label: 'Comments' },
   { id: 'attendance', label: 'Attendance' },
+  { id: 'scores', label: 'Scores' },
 ];
 
 /** Join a student's profile with this term's record into the shape the sheet and desk use. */
@@ -73,6 +76,31 @@ export function ClassPage() {
     });
   };
 
+  // Facts from the school's records to ground each comment: score, grade, position, attendance. No names.
+  const termDays = useQuery<AttendanceDay>(
+    allowed && termId ? query(paths.attendance(schoolId), where('classId', '==', classId), where('termId', '==', termId)) : null,
+    `attFacts:${classId}:${termId}:${allowed}`,
+  );
+  const results = useMemo(
+    () => computeResults(profiles.data.map((p) => p.id), Object.fromEntries(records.data.map((r) => [r.studentId, r.scores])), assessmentsOf(school), bandsOf(school)),
+    [profiles.data, records.data, school],
+  );
+  const getFacts = (s: Student) => {
+    const out: string[] = [];
+    const r = results.rows.get(s.id);
+    if (r?.grade) out.push(`Term score ${r.total} out of ${results.maxTotal} (grade ${r.grade}, ${r.remark.toLowerCase()}), ${ordinal(r.position)} of ${results.ranked} in the class; class average ${results.average}.`);
+    let days = 0;
+    let present = 0;
+    for (const d of termDays.data) {
+      const m = d.marks[s.id];
+      if (!m) continue;
+      days++;
+      if (m !== 'A') present++;
+    }
+    if (days) out.push(`Attendance: present on ${present} of ${days} school days this term.`);
+    return out.join(' ');
+  };
+
   const writer = useCommentWriter({
     cls,
     termName: term?.name ?? '',
@@ -82,6 +110,7 @@ export function ClassPage() {
     addLedger: ws.log,
     toast,
     onDeviceChanged: ws.refreshDevice,
+    getFacts,
   });
 
   if (!cls) return <div className="ws-empty muted">This class no longer exists.</div>;
@@ -101,6 +130,8 @@ export function ClassPage() {
       </nav>
       {tab === 'attendance' ? (
         <AttendanceView cls={cls} students={profiles.data.slice().sort((a, b) => a.order - b.order)} ws={ws} />
+      ) : tab === 'scores' ? (
+        <ScoresView cls={cls} students={profiles.data.slice().sort((a, b) => a.order - b.order)} records={records.data} />
       ) : (
     <div className="class-page">
       <ClassSheet
