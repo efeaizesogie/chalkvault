@@ -1,4 +1,4 @@
-import type { Source } from '../lib/db';
+﻿import type { Source } from '../data/types';
 
 export function SourceStamp({ source, ms }: { source: Source | 'blocked'; ms?: number }) {
   if (source === 'on_device')

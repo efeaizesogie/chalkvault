@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { CLASS_COLOURS, type ClassRoom, type Student } from '../lib/db';
+﻿import { useState } from 'react';
+import { CLASS_COLOURS, type ClassRoom, type Student } from '../data/types';
 import type { DeviceStatus } from '../lib/ai';
 import { batchQueue, download, finalText, slug, toCSV, toPlain } from '../lib/export';
 
@@ -21,7 +21,8 @@ export function ClassSheet(props: {
   onAddStudents: (names: string[]) => void;
   onBatch: () => void;
   onStopBatch: () => void;
-  onEditClass: () => void;
+  onEditClass?: () => void;
+  termName: string;
   toast: (t: string) => void;
 }) {
   const { cls, students, batch } = props;
@@ -57,14 +58,16 @@ export function ClassSheet(props: {
       <header className="sheet-head" style={{ background: col.bg, color: col.ink }}>
         <div className="sheet-title">
           <p className="mono eyebrow">
-            {cls.subject || 'Class'}
-            {cls.term ? ` · ${cls.term}` : ''}
+            {cls.subject || cls.level || 'Class'}
+            {props.termName ? ` · ${props.termName}` : ''}
           </p>
           <h1 className="display-sm">{cls.name}</h1>
         </div>
-        <button className="link on-colour" onClick={props.onEditClass} style={{ color: col.ink }}>
-          Edit
-        </button>
+        {props.onEditClass && (
+          <button className="link on-colour" onClick={props.onEditClass} style={{ color: col.ink }}>
+            Edit
+          </button>
+        )}
       </header>
 
       <div className="sheet-bar">
@@ -183,17 +186,17 @@ export function ClassSheet(props: {
         </button>
       )}
 
-      <PrintSheet cls={cls} students={students} />
+      <PrintSheet cls={cls} students={students} termName={props.termName} />
     </section>
   );
 }
 
-function PrintSheet({ cls, students }: { cls: ClassRoom; students: Student[] }) {
+function PrintSheet({ cls, students, termName }: { cls: ClassRoom; students: Student[]; termName: string }) {
   return (
     <div className="print-only">
       <h1>{cls.name}</h1>
       <p>
-        {cls.subject} {cls.term && `· ${cls.term}`}
+        {cls.subject || cls.level} {termName && `· ${termName}`}
       </p>
       {students
         .filter((s) => finalText(s))

@@ -1,4 +1,4 @@
-import type { ClassRoom, Student } from './db';
+﻿import type { ClassRoom, Student } from '../data/types';
 
 export const finalText = (s: Student) => s.final ?? s.draft?.comment ?? '';
 

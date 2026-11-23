@@ -1,7 +1,7 @@
-import { clearLedger, type LedgerEntry } from '../lib/db';
+﻿import type { LedgerEntry } from '../data/types';
 import { SourceStamp } from './SourceStamp';
 
-export function Ledger({ entries, onClose, onCleared }: { entries: LedgerEntry[]; onClose: () => void; onCleared: () => void }) {
+export function Ledger({ entries, onClose, onClear }: { entries: LedgerEntry[]; onClose: () => void; onClear?: () => Promise<void> }) {
   const local = entries.filter((e) => e.source === 'on_device').length;
   const cloud = entries.filter((e) => e.source === 'in_cloud');
   const chars = cloud.reduce((n, e) => n + e.charsSent, 0);
@@ -47,12 +47,11 @@ export function Ledger({ entries, onClose, onCleared }: { entries: LedgerEntry[]
             </li>
           ))}
         </ol>
-        {entries.length > 0 && (
+        {entries.length > 0 && onClear && (
           <button
             className="link"
             onClick={async () => {
-              await clearLedger();
-              onCleared();
+              await onClear?.();
             }}
           >
             Clear ledger

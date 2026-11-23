@@ -1,9 +1,12 @@
-import { useState } from 'react';
-import { CLASS_COLOURS, uid, type ClassColour, type ClassRoom } from '../lib/db';
+﻿import { useState } from 'react';
+import { CLASS_COLOURS, type ClassColour, type ClassRoom } from '../data/types';
+import { uid } from '../data/api';
 
 export function AddClassDialog(props: {
   initial: ClassRoom | null;
   usedColours: ClassColour[];
+  levels: string[];
+  subjects: string[];
   onSave: (c: ClassRoom) => void;
   onDelete?: () => void;
   onClose: () => void;
@@ -12,7 +15,7 @@ export function AddClassDialog(props: {
   const firstFree = (Object.keys(CLASS_COLOURS) as ClassColour[]).find((k) => !props.usedColours.includes(k)) ?? 'chalk';
   const [name, setName] = useState(i?.name ?? '');
   const [subject, setSubject] = useState(i?.subject ?? '');
-  const [term, setTerm] = useState(i?.term ?? '');
+  const [level, setLevel] = useState(i?.level ?? props.levels[0] ?? '');
   const [colour, setColour] = useState<ClassColour>(i?.colour ?? firstFree);
 
   const submit = (e: React.FormEvent) => {
@@ -22,7 +25,7 @@ export function AddClassDialog(props: {
       id: i?.id ?? uid(),
       name: name.trim(),
       subject: subject.trim(),
-      term: term.trim(),
+      level,
       colour,
       createdAt: i?.createdAt ?? Date.now(),
     });
@@ -39,12 +42,21 @@ export function AddClassDialog(props: {
         </label>
         <div className="field-row">
           <label className="field">
-            <span className="mono">Subject</span>
-            <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Mathematics" />
+            <span className="mono">Level</span>
+            <select value={level} onChange={(e) => setLevel(e.target.value)}>
+              {props.levels.map((l) => (
+                <option key={l}>{l}</option>
+              ))}
+            </select>
           </label>
           <label className="field">
-            <span className="mono">Term</span>
-            <input value={term} onChange={(e) => setTerm(e.target.value)} placeholder="Autumn term" />
+            <span className="mono">Subject (optional)</span>
+            <input list="cv-subjects" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Form class, or a subject" />
+            <datalist id="cv-subjects">
+              {props.subjects.map((s) => (
+                <option key={s} value={s} />
+              ))}
+            </datalist>
           </label>
         </div>
         <fieldset className="field">

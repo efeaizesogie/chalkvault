@@ -1,7 +1,8 @@
 ﻿import { getGenerativeModel, InferenceMode, InferenceSource, Schema, type GenerativeModel, type Part } from 'firebase/ai';
-import { getFirebaseAI } from './firebase';
+import { getFirebaseAI, SetupError } from './firebase';
+export { SetupError };
 import { redact, restore, STUDENT_TOKEN, type Redaction } from './redact';
-import type { Draft, Pronoun, Source } from './db';
+import type { Draft, Pronoun, Source } from '../data/types';
 
 // ---------- On-device status ----------
 
@@ -68,11 +69,6 @@ function ai() {
   return a;
 }
 
-export class SetupError extends Error {
-  constructor() {
-    super('Firebase is not configured yet. Add your project values in src/firebase-config.ts.');
-  }
-}
 export class PrivacyBlock extends Error {}
 
 // Cloud models, in order. If the first is overloaded, the next one is tried.

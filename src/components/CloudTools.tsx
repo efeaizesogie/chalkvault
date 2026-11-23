@@ -1,5 +1,5 @@
 ﻿import { useMemo, useState } from 'react';
-import { addLedger, type Student } from '../lib/db';
+import type { LedgerEntry, Student } from '../data/types';
 import { alignToStandards, LANGUAGES, prepareOutbound, SetupError, translateTemplate } from '../lib/ai';
 import { restore } from '../lib/redact';
 import { SourceStamp } from './SourceStamp';
@@ -13,6 +13,7 @@ export function CloudTools(props: {
   roster: string[];
   onSave: (s: Student) => Promise<void>;
   onLedger: () => void;
+  addLedger: (e: Omit<LedgerEntry, 'id' | 'at' | 'uid'>) => Promise<void>;
   onUseComment: (c: string) => void;
   toast: (t: string, k?: 'info' | 'warn' | 'error') => void;
 }) {
@@ -34,12 +35,12 @@ export function CloudTools(props: {
         const r = await translateTemplate(outbound.text, language);
         const text = restore(r.text, s.name); // the real name goes back in locally
         await props.onSave({ ...s, translation: { language, text, at: Date.now() } });
-        await addLedger({ task: `Parent translation · ${language}`, source: 'in_cloud', charsSent: r.prompt.length, detail: r.prompt });
+        await props.addLedger({ task: `Parent translation · ${language}`, source: 'in_cloud', charsSent: r.prompt.length, detail: r.prompt });
         setLastMs(r.ms);
       } else {
         const r = await alignToStandards(outbound.text, framework);
         setAligned({ comment: restore(r.comment, s.name), standards: r.standards, ms: r.ms });
-        await addLedger({ task: 'Align to standards', source: 'in_cloud', charsSent: r.prompt.length, detail: r.prompt });
+        await props.addLedger({ task: 'Align to standards', source: 'in_cloud', charsSent: r.prompt.length, detail: r.prompt });
       }
       props.onLedger();
       setTask(null);

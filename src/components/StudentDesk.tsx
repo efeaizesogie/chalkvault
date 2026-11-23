@@ -1,7 +1,7 @@
 ﻿import { useEffect, useRef, useState } from 'react';
-import { deleteStudent, type ClassRoom, type Pronoun, type Student } from '../lib/db';
+import type { ClassRoom, LedgerEntry, Pronoun, Student } from '../data/types';
 import { LEVELS, TONES, type DeviceStatus } from '../lib/ai';
-import type { Prefs } from '../App';
+import type { Prefs } from '../ui/prefs';
 import { SourceStamp } from './SourceStamp';
 import { CloudTools } from './CloudTools';
 
@@ -18,7 +18,8 @@ export function StudentDesk(props: {
   onSave: (s: Student) => Promise<void>;
   onWrite: (s: Student, image?: { base64: string; mimeType: 'image/jpeg' | 'image/png' }) => Promise<boolean>;
   onLedger: () => void;
-  onRemoved: (id: string) => void;
+  onRemove: (s: Student) => Promise<void>;
+  addLedger: (e: Omit<LedgerEntry, 'id' | 'at' | 'uid'>) => Promise<void>;
   toast: (t: string, k?: 'info' | 'warn' | 'error') => void;
 }) {
   const s = props.student;
@@ -68,8 +69,7 @@ export function StudentDesk(props: {
 
   const remove = async () => {
     if (!confirm(`Remove ${s.name} and their notes from this class? This cannot be undone.`)) return;
-    await deleteStudent(s.id);
-    props.onRemoved(s.id);
+    await props.onRemove(s);
   };
 
   return (
@@ -209,7 +209,7 @@ export function StudentDesk(props: {
       )}
 
       {s.draft && !props.busy && (
-        <CloudTools student={s} comment={comment} roster={props.roster} onSave={props.onSave} onLedger={props.onLedger} toast={props.toast} onUseComment={setComment} />
+        <CloudTools student={s} comment={comment} roster={props.roster} onSave={props.onSave} onLedger={props.onLedger} addLedger={props.addLedger} toast={props.toast} onUseComment={setComment} />
       )}
 
       <button className="link danger remove" onClick={remove}>
