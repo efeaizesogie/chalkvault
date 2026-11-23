@@ -12,6 +12,21 @@ Teachers write hundreds of report comments a term, and many already paste studen
 - **A ledger** of every AI request shows where it ran and how many characters, if any, were sent.
 - Export to the clipboard, CSV or PDF. All data lives in IndexedDB in the teacher's browser, with no account and no sync.
 
+## The school platform
+
+Chalkvault is now a multi-school records system. Each school registers its own private space in Cloud Firestore, and security rules (`firestore.rules`) limit each teacher to their own classes.
+
+- **Setup and staff:** a setup wizard with country presets (Nigeria, Ghana, Kenya, UK, US); invite links; owner, admin and teacher roles.
+- **Student records:** profiles, guardians and the language each family reads in, plus every term's comment.
+- **Attendance:** a one-tap daily register with term totals. A photographed paper register is read **on-device only** (`ONLY_ON_DEVICE`, image + JSON schema), because a register shows every child's name.
+- **Gradebook:** CA and exam scores, totals, WAEC (A1–F9) or letter grades, positions, class average and a printable broadsheet.
+- **Report comments:** streamed as they're written (`generateContentStream`, on-device or cloud). Grounded in the student's score and attendance. Each also carries an on-device **support flag** (enum output) for head-teacher follow-up.
+- **Approval:** teachers send comments for approval; owners and admins approve, which locks the record (enforced in the rules). A school-set character limit applies.
+- **Parents:** French and Spanish are translated **on-device** (`expectedOutputs`). Other languages go to the cloud after names are removed. **Share on WhatsApp** from the record.
+- **Ledger:** every AI request, where it ran, and what (if anything) left the device.
+
+The research behind these choices is in [RESEARCH.md](RESEARCH.md).
+
 ## How the hybrid inference works
 
 `src/lib/ai.ts`

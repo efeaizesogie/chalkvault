@@ -248,7 +248,7 @@ export function StudentDesk(props: {
             {locked ? (
               props.isAdmin && (
                 <button className="pill ghost" onClick={unlock}>
-                  Unlock for editing
+                  Reopen for editing
                 </button>
               )
             ) : props.isAdmin ? (

@@ -32,7 +32,7 @@ export function useCommentWriter(opts: {
     const { cls, termName, students, prefs, save, addLedger, toast } = o.current;
     if (!cls) return false;
     if (s.status === 'approved') {
-      toast(`${s.name}’s comment is approved and locked. Ask an admin to unlock it first.`, 'warn');
+      toast(`${s.name}’s comment is approved and locked. Ask an admin to reopen it first.`, 'warn');
       return false;
     }
     if (!s.notes.trim() && !image) {

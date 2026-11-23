@@ -5,13 +5,15 @@ const FEATURES: { title: string; body: string; soon?: boolean }[] = [
   { title: 'Your school, your private space', body: 'Register once and set up terms, class levels and subjects. Every school is a separate, locked space.' },
   { title: 'Staff and roles', body: 'Invite teachers with a private link. Teachers only see the classes you assign them; owners and admins see everything.' },
   { title: 'Classes and student records', body: 'Profiles, admission numbers, guardians and the language each family reads in, all in one record per child.' },
-  { title: 'Report comments, written on the laptop', body: 'Type rough notes or photograph your gradebook. Gemini Nano in Chrome turns them into a warm, specific comment you can edit.' },
-  { title: 'A whole class in one click', body: 'Batch-write comments for every student. On-device writing costs nothing per comment and works with the Wi-Fi off.' },
-  { title: 'Parents in their own language', body: 'Translate finished comments into Yoruba, Hausa, Igbo, Spanish, French and more, after every name is removed.' },
-  { title: 'Reports by term', body: 'Each student keeps a record of every term’s comment. Print report pages or export a class to CSV.' },
-  { title: 'An audit ledger', body: 'Every AI request is logged: where it ran, and exactly what (if anything) left the device.' },
+  { title: 'Attendance in one tap', body: 'Mark a class present, late or absent in seconds. Or photograph the paper register and Gemini Nano reads it on the laptop.' },
+  { title: 'Scores, grades and positions', body: 'Enter CA and exam scores. Totals, WAEC or letter grades, positions and a printable broadsheet are worked out for you.' },
+  { title: 'Report comments, written on the laptop', body: 'Gemini Nano turns rough notes, scores and attendance into a warm, specific comment, writing it as you watch.' },
+  { title: 'A whole class in one click', body: 'Write every comment in a class at once. On-device writing costs nothing per comment and works with the Wi-Fi off.' },
+  { title: 'Head teacher approval', body: 'Teachers send comments for approval. Once approved, a comment is locked, and a school-set length limit keeps reports tidy.' },
+  { title: 'Parents in their own language', body: 'French and Spanish are translated on the laptop. Yoruba, Hausa, Igbo and more go to the cloud with names removed. Share on WhatsApp.' },
+  { title: 'Students who need follow-up', body: 'As each comment is written, the AI flags academic, attendance or wellbeing concerns for the head teacher.' },
+  { title: 'An audit ledger', body: 'Every AI request is logged: where it ran, and exactly what, if anything, left the device.' },
   { title: 'Student files', body: 'Upload past reports, certificates and forms to a student’s record.', soon: true },
-  { title: 'Attendance and gradebook', body: 'Daily registers and scores that feed straight into report comments.', soon: true },
 ];
 
 const FAQ: { q: string; a: string }[] = [
