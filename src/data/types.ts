@@ -107,7 +107,7 @@ export interface TermRecord {
   notes: string;
   draft?: Draft;
   final?: string;
-  translation?: { language: string; text: string; at: number };
+  translation?: { language: string; text: string; at: number; source?: Source };
   /** Scores by assessment key. */
   scores?: Record<string, number>;
   /** Approval: a teacher submits; an owner or admin approves, which locks the comment. */

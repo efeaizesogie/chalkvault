@@ -262,7 +262,7 @@ export function StudentDesk(props: {
       )}
 
       {s.draft && !props.busy && (
-        <CloudTools student={s} comment={comment} roster={props.roster} onSave={props.onSave} onLedger={props.onLedger} addLedger={props.addLedger} toast={props.toast} onUseComment={setComment} />
+        <CloudTools student={s} comment={comment} roster={props.roster} onSave={props.onSave} onLedger={props.onLedger} addLedger={props.addLedger} toast={props.toast} device={props.device} onUseComment={setComment} />
       )}
 
       <button className="link danger remove" onClick={remove}>

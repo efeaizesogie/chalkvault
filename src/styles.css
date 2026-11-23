@@ -339,3 +339,6 @@ textarea.comment:focus { outline: none; border-color: var(--ink); }
 
 .final-tag.waiting { background: var(--peach); color: var(--sienna); }
 .hint.over { color: var(--danger); font-weight: 600; }
+
+.slip.local { background: var(--paper); color: var(--ink); border-color: var(--ink); }
+.slip-local { margin: 0; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }

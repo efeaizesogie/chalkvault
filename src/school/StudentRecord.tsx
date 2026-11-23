@@ -6,6 +6,7 @@ import { useDoc, useQuery } from '../data/hooks';
 import type { Guardian, Pronoun, StudentProfile, TermRecord } from '../data/types';
 import { LANGUAGES } from '../lib/ai';
 import { useToast } from '../ui/toast';
+import { whatsappLink } from '../lib/share';
 import { useSchool } from './SchoolContext';
 
 const blankGuardian: Guardian = { name: '', relationship: '', phone: '', email: '', language: 'English' };
@@ -164,6 +165,20 @@ export function StudentRecord() {
                 <p className="term-translation">
                   <span className="mono">{r.translation.language}</span> {r.translation.text}
                 </p>
+              )}
+              {(r.final || r.draft?.comment) && (
+                <a
+                  className="pill ghost share"
+                  target="_blank"
+                  rel="noreferrer"
+                  title={p.guardians[0]?.phone ? `Opens a WhatsApp chat with ${p.guardians[0].name}` : 'Opens WhatsApp so you can choose the parent'}
+                  href={whatsappLink(
+                    [`${school.name}: ${termName(r.termId)} report for ${p.name}`, r.final ?? r.draft?.comment ?? '', r.translation?.text ?? ''].filter(Boolean).join('\n\n'),
+                    p.guardians[0]?.phone,
+                  )}
+                >
+                  Share on WhatsApp
+                </a>
               )}
               {r.notes && (
                 <details>

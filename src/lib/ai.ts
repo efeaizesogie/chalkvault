@@ -356,6 +356,32 @@ export function prepareOutbound(comment: string, name: string, roster: string[])
 
 export const LANGUAGES = ['Yoruba', 'Hausa', 'Igbo', 'Spanish', 'French', 'Portuguese', 'Arabic', 'Mandarin Chinese', 'Haitian Creole', 'Vietnamese'];
 
+/** Languages Gemini Nano can write on-device (Prompt API expectedOutputs). Others go to the cloud, de-identified. */
+export const ON_DEVICE_LANGUAGES: Record<string, string> = { French: 'fr', Spanish: 'es', German: 'de', Japanese: 'ja' };
+const translateModels = new Map<string, GenerativeModel>();
+
+/** Translate on this device. The comment keeps the real name because nothing leaves the computer. */
+export async function translateOnDevice(text: string, language: string) {
+  const code = ON_DEVICE_LANGUAGES[language];
+  if (!code) throw new Error(`${language} can’t be written on-device.`);
+  let m = translateModels.get(code);
+  if (!m) {
+    m = getGenerativeModel(ai(), {
+      mode: InferenceMode.ONLY_ON_DEVICE,
+      onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: [code] }] } },
+    });
+    translateModels.set(code, m);
+  }
+  const t0 = performance.now();
+  const prompt = [
+    `Translate this school report comment for a parent into ${language}.`,
+    'Keep the meaning and warmth; use natural, respectful wording a parent would use. Keep names unchanged. Return only the translation.',
+    `"""\n${text}\n"""`,
+  ].join('\n');
+  const res = await m.generateContent(prompt);
+  return { text: res.response.text().trim(), ms: performance.now() - t0 };
+}
+
 export async function translateTemplate(deidentified: string, language: string) {
   const t0 = performance.now();
   const prompt = [

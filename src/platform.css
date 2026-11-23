@@ -277,3 +277,5 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .queue-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .queue-list li { display: flex; gap: 12px; align-items: baseline; }
 .queue-list a { color: var(--ink); font: 400 18px/1.2 var(--serif); }
+
+.term-report .share { justify-self: start; }
