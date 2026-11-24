@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { query, where } from 'firebase/firestore';
@@ -51,6 +51,17 @@ export function Workspace() {
 }
 
 function Frame() {
+  // The masthead sticks to the top; the side menu and the student desk stick just below it, whatever its height.
+  const mastRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const el = mastRef.current;
+    if (!el) return;
+    const set = () => document.documentElement.style.setProperty('--mast-h', `${Math.round(el.getBoundingClientRect().height)}px`);
+    set();
+    const ro = new ResizeObserver(set);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   const { school, schoolId, me, isAdmin, terms, term, currentTerm, viewingPast, termClosed, setViewTerm, formClasses, myOfferings, classes } = useSchool();
   const { user, signOut } = useAuth();
   const nav = useNavigate();
@@ -86,7 +97,7 @@ function Frame() {
 
   return (
     <div className="app ws">
-      <header className="masthead">
+      <header className="masthead" ref={mastRef}>
         <div className="brand">
           <Link to={`/s/${schoolId}`} className="wordmark">
             Chalkvault
