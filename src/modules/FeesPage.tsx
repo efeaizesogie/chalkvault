@@ -40,10 +40,10 @@ export function FeesPage() {
 
   if (!canSee) return <Navigate to={`/s/${schoolId}`} replace />;
 
-  const prevTermId = (() => {
-    const i = terms.findIndex((t) => t.id === termId);
-    return i > 0 ? terms[i - 1].id : '';
-  })();
+  // Earlier terms, latest first: arrears come from the most recent earlier invoice, even if a term had none.
+  const order = terms.find((t) => t.id === termId)?.order ?? 0;
+  const earlier = terms.filter((t) => t.order < order).sort((a, b) => b.order - a.order).map((t) => t.id);
+  const lastInvoice = (studentId: string) => earlier.map((t) => invoices.data.find((i) => i.id === `${t}_${studentId}`)).find(Boolean);
 
   const generate = async () => {
     try {
@@ -53,7 +53,7 @@ export function FeesPage() {
         const cls = classes.find((c) => c.id === s.classId);
         if (!cls) continue;
         const existing = invoices.data.find((i) => i.id === `${termId}_${s.id}`);
-        const prev = prevTermId ? invoices.data.find((i) => i.id === `${prevTermId}_${s.id}`) : undefined;
+        const prev = lastInvoice(s.id);
         const inv = buildInvoice({
           student: s,
           level: cls.level,

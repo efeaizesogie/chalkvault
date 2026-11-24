@@ -23,19 +23,22 @@ const BRIEF_Q =
 
 /** The principal's and owner's dashboard: this term against the last, with an AI brief written from the same figures. */
 export function PrincipalDashboard({ greeting }: { greeting: (line: string) => JSX.Element }) {
-  const { schoolId, school, classes, offerings, members, terms, term, policy } = useSchool();
+  const { schoolId, school, classes, offerings, members, terms, term, policy, viewingPast } = useSchool();
   const ws = useOutletContext<WorkspaceCtx>();
   const students = useQuery<StudentProfile>(paths.students(schoolId), `dash-st:${schoolId}`);
   const today = useQuery<AttendanceDay>(query(paths.attendance(schoolId), where('date', '==', todayISO())), `dash-att:${todayISO()}`);
   const summaries = useQuery<TermSummary>(mod(schoolId, 'termSummaries'), `dash-sums:${schoolId}`);
   const notices = useNotices();
 
-  const now = useTermStats(term, students.data);
+  // A closed term shows the figures saved when it closed; any other term is worked out live.
+  const savedNow = useSavedSummary(term?.status === 'closed' ? term.id : undefined);
+  const fromSaved = term?.status === 'closed' && (savedNow.loading || !!savedNow.data);
+  const now = useTermStats(fromSaved ? null : term, students.data);
   const prevTerm = term ? [...terms].sort((a, b) => a.order - b.order).filter((t) => t.order < term.order).pop() ?? null : null;
   const savedPrev = useSavedSummary(prevTerm?.id);
   const livePrev = useTermStats(savedPrev.loading || savedPrev.data ? null : prevTerm, students.data);
   const before: TermSummary | null = savedPrev.data ?? livePrev.stats?.summary ?? null;
-  const s = now.stats?.summary ?? null;
+  const s = (fromSaved ? savedNow.data : now.stats?.summary) ?? null;
   const risks = now.stats?.risks ?? [];
 
   const armName = (id: string) => classes.find((c) => c.id === id)?.name ?? 'An arm';
@@ -191,7 +194,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
       </section>
 
       <section className="stat-grid" aria-label="This term at a glance">
-        <Figure label="Attendance today" value={todayPct} note={`${registersToday.size} of ${classes.length} arms have a register.`} to={`/s/${schoolId}/classes`} />
+        {!viewingPast && <Figure label="Attendance today" value={todayPct} note={`${registersToday.size} of ${classes.length} arms have a register.`} to={`/s/${schoolId}/classes`} />}
         <Figure label="Attendance this term" value={s?.attendancePct ?? null} before={two ? before?.attendancePct : undefined} to={`/s/${schoolId}/classes`} />
         <Figure label="Average score" value={s?.average ?? null} before={two ? before?.average : undefined} note={s ? `${s.scoresEntered} of ${s.scoresExpected} scores in.` : ''} to={`/s/${schoolId}/results`} />
         <Figure label="Fees collected" value={s && s.feesExpected ? pct(s.feesCollected, s.feesExpected) : null} before={two && before?.feesExpected ? pct(before.feesCollected, before.feesExpected) : undefined} note={s?.feesExpected ? `${naira(s.feesCollected)} of ${naira(s.feesExpected)}.` : 'No invoices yet.'} to={`/s/${schoolId}/fees`} />

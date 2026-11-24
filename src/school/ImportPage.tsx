@@ -101,7 +101,7 @@ export function ImportPage() {
     if (!plan) return null;
     const inc = plan.students.filter((s) => s.include);
     return {
-      newStudents: inc.filter((s) => !s.matchId).length,
+      newStudents: inc.filter((s) => !s.matchId && !!plan.arms.find((a) => a.key === s.armKey)?.level).length,
       updates: inc.filter((s) => s.matchId).length,
       newArms: plan.arms.filter((a) => !a.classId && a.level && plan.students.some((s) => s.include && s.armKey === a.key)).length,
       scores: plan.scores.filter((s) => s.include).reduce((n, s) => n + s.rows.length, 0),

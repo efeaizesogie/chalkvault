@@ -37,7 +37,7 @@ export function useTermStats(term: Term | null, students?: StudentProfile[]) {
         : null,
     [term, studentList, classes, school, offerings, att.data, sr.data, rec.data, inv.data],
   );
-  return { stats, loading, attendance: att.data, subjectRecords: sr.data, records: rec.data, invoices: inv.data };
+  return { stats, loading, students: studentList, attendance: att.data, subjectRecords: sr.data, records: rec.data, invoices: inv.data };
 }
 
 /** The saved summary of a term (written when the term is closed), or null. */

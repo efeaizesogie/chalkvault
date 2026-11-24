@@ -120,7 +120,8 @@ export function TermPanel() {
 function CloseTerm({ term, onDone }: { term: Term; onDone: () => void }) {
   const { schoolId, classes, terms, setViewTerm } = useSchool();
   const toast = useToast();
-  const { stats, loading, invoices } = useTermStats(term);
+  const { stats, loading, invoices, students } = useTermStats(term);
+  const peopled = classes.filter((c) => students.some((x) => x.classId === c.id && (x.status ?? 'active') === 'active'));
   const s = stats?.summary;
   const nextName = NEXT[term.name.trim().toLowerCase()] ?? '';
   const [name, setName] = useState(nextName);
@@ -134,7 +135,7 @@ function CloseTerm({ term, onDone }: { term: Term; onDone: () => void }) {
     ? [
         { ok: s.scoresEntered >= s.scoresExpected, text: s.scoresEntered >= s.scoresExpected ? 'Every subject score is in.' : `${s.scoresExpected - s.scoresEntered} subject scores are missing.` },
         { ok: s.commentsApproved >= s.students, text: s.commentsApproved >= s.students ? 'Every form comment is approved.' : `${s.students - s.commentsApproved} form comments are not approved yet.` },
-        { ok: classes.every((c) => published.has(c.id)), text: classes.every((c) => published.has(c.id)) ? 'Every arm’s results are published.' : `Results not published for ${classes.filter((c) => !published.has(c.id)).map((c) => c.name).join(', ')}.` },
+        { ok: peopled.every((c) => published.has(c.id)), text: peopled.every((c) => published.has(c.id)) ? 'Every arm’s results are published.' : `Results not published for ${peopled.filter((c) => !published.has(c.id)).map((c) => c.name).join(', ')}.` },
         { ok: true, text: owing.length ? `${owing.length} children owe ${naira(owing.reduce((n, i) => n + i.balance, 0))}. It carries into next term’s invoices as arrears.` : 'No fees outstanding.' },
       ]
     : [];

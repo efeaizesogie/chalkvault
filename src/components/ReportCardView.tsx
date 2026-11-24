@@ -138,7 +138,7 @@ export function ReportCardView(props: {
             </tfoot>
           </table>
           <p className="rc-decision">
-            {c.cumulative.passes ? <b>Promoted to the next class.</b> : <b>Promotion under review.</b>}
+            {c.cumulative.passes ? <b>Meets the school’s promotion rule.</b> : <b>Promotion under review.</b>}
             {!c.cumulative.passes && ` The school’s rule was not met: ${c.cumulative.reasons.join('; ')}.`}
           </p>
         </div>
