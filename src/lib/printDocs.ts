@@ -195,6 +195,9 @@ export function tableDoc(
     return out;
   };
 
+  if (sections.every((sec) => sec.length <= 1)) {
+    return `<h1>${esc(title)}</h1>${opts.subtitle ? `<p class="doc-sub">${esc(opts.subtitle)}</p>` : ''}${opts.intro ?? ''}<p class="note">Nothing recorded yet.</p>`;
+  }
   const body = sections
     .filter((sec) => sec.length)
     .map((sec) => {
