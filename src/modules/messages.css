@@ -1,0 +1,11 @@
+.template-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.template-list li { border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; background: var(--paper); display: grid; gap: 4px; }
+.template-list p { margin: 0; font: 400 16px/1.5 var(--serif); }
+.msg-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--rule); }
+.msg-list li { display: grid; grid-template-columns: 220px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+.msg-list li.sent { opacity: 0.6; }
+.msg-who { display: grid; }
+.msg-text { margin: 0; font-size: 14px; color: var(--ink-2); }
+@media (max-width: 820px) {
+  .msg-list li { grid-template-columns: 1fr; }
+}

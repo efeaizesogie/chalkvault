@@ -458,6 +458,64 @@ export async function mapColumns(headers: string[], columns: { key: string; labe
   };
 }
 
+// ---------- Parent messages: one name-free template, translated per language, filled in locally ----------
+
+let messageModel: GenerativeModel | null = null;
+
+/** Draft a short parent message with placeholders. Contains no names, so PREFER_ON_DEVICE may route it either way. */
+export async function draftParentMessage(kind: 'absence' | 'fees' | 'results' | 'custom', gist: string, schoolName: string) {
+  messageModel ??= getGenerativeModel(ai(), {
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] } },
+    inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { temperature: 0.4 } },
+  });
+  const purpose = {
+    absence: 'tell the parent their child was marked absent today and ask them to contact the school if they did not know',
+    fees: 'politely remind the parent of the outstanding school-fees balance for this term and how to pay',
+    results: 'tell the parent this term’s report card is ready and how to view it with the result PIN at the link',
+    custom: 'pass on the school’s message below',
+  }[kind];
+  const allowed = { absence: '[GUARDIAN], [STUDENT], [CLASS], [DATE]', fees: '[GUARDIAN], [STUDENT], [CLASS], [AMOUNT]', results: '[GUARDIAN], [STUDENT], [CLASS], [PIN], [LINK]', custom: '[GUARDIAN], [STUDENT], [CLASS]' }[kind];
+  const prompt = [
+    `Write a short, warm, respectful text message from ${schoolName} to a parent in Nigeria, to ${purpose}.`,
+    gist ? `The school’s note: ${gist.slice(0, 600)}` : '',
+    `Use these placeholders exactly as written, and no real names: ${allowed}.`,
+    'At most 60 words. Plain text, no emoji, no subject line. End with the school’s name.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const t0 = performance.now();
+  const res = await messageModel.generateContent(prompt);
+  return {
+    text: res.response.text().trim().replace(/^["“]|["”]$/g, ''),
+    source: (res.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device') as Source,
+    prompt,
+    ms: performance.now() - t0,
+  };
+}
+
+/** Translate a placeholder template. On-device for French, Spanish, German, Japanese; cloud for others (it carries no names). */
+export async function translateMessage(template: string, language: string) {
+  const code = ON_DEVICE_LANGUAGES[language];
+  const local = !!code && (await deviceStatus()) === 'available';
+  const prompt = [
+    `Translate this text message for a parent into ${language}.`,
+    'Keep every placeholder in square brackets exactly as written, untranslated. Keep it warm and respectful. Return only the translation.',
+    `"""\n${template}\n"""`,
+  ].join('\n');
+  const t0 = performance.now();
+  if (local) {
+    const m = getGenerativeModel(ai(), {
+      mode: InferenceMode.ONLY_ON_DEVICE,
+      onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: [code] }] } },
+    });
+    const res = await m.generateContent(prompt);
+    return { text: res.response.text().trim(), source: 'on_device' as Source, prompt, ms: performance.now() - t0 };
+  }
+  const res = await generate('text', prompt);
+  return { text: res.response.text().trim(), source: 'in_cloud' as Source, prompt, ms: performance.now() - t0 };
+}
+
 // ---------- Ask Chalkvault: questions about the school, answered from figures compiled in the browser ----------
 
 let askModel: GenerativeModel | null = null;
