@@ -151,6 +151,9 @@ function Frame() {
           <NavLink end to={`/s/${schoolId}`} className="side-link">
             Overview
           </NavLink>
+          <NavLink to={`/s/${schoolId}/ask`} className="side-link side-ask">
+            Ask Chalkvault
+          </NavLink>
           {isAdmin && (
             <NavLink to={`/s/${schoolId}/classes`} end className="side-link">
               Classes
@@ -175,6 +178,17 @@ function Frame() {
               {myOfferings.length === 0 && formClasses.length === 0 && <p className="side-empty muted small">Nothing assigned to you yet.</p>}
             </>
           )}
+          {me.role !== 'bursar' && (
+            <>
+              <div className="side-head mono">Teaching</div>
+              <NavLink to={`/s/${schoolId}/lessons`} className="side-link">
+                Lesson notes and quizzes
+              </NavLink>
+              <NavLink to={`/s/${schoolId}/timetable`} className="side-link">
+                Timetable
+              </NavLink>
+            </>
+          )}
           <div className="side-head mono">School</div>
           <NavLink to={`/s/${schoolId}/students`} className="side-link">
             Students
@@ -184,18 +198,49 @@ function Frame() {
               <NavLink to={`/s/${schoolId}/results`} className="side-link">
                 Results
               </NavLink>
-              <NavLink to={`/s/${schoolId}/staff`} className="side-link">
-                Staff
+              <NavLink to={`/s/${schoolId}/admissions`} className="side-link">
+                Admissions
               </NavLink>
             </>
           )}
+          {(isAdmin || me.role === 'bursar') && (
+            <NavLink to={`/s/${schoolId}/fees`} className="side-link">
+              Fees
+            </NavLink>
+          )}
+          <NavLink to={`/s/${schoolId}/messages`} className="side-link">
+            Messages to parents
+          </NavLink>
           <NavLink to={`/s/${schoolId}/notices`} className="side-link">
             Notices
           </NavLink>
+          <div className="side-head mono">Running the school</div>
           {isAdmin && (
-            <NavLink to={`/s/${schoolId}/settings`} className="side-link">
-              Settings
+            <NavLink to={`/s/${schoolId}/staff`} className="side-link">
+              Staff
             </NavLink>
+          )}
+          <NavLink to={`/s/${schoolId}/leave`} className="side-link">
+            Leave
+          </NavLink>
+          <NavLink to={`/s/${schoolId}/library`} className="side-link">
+            Library
+          </NavLink>
+          <NavLink to={`/s/${schoolId}/transport`} className="side-link">
+            Transport
+          </NavLink>
+          <NavLink to={`/s/${schoolId}/inventory`} className="side-link">
+            Inventory
+          </NavLink>
+          {isAdmin && (
+            <>
+              <NavLink to={`/s/${schoolId}/alumni`} className="side-link">
+                Alumni
+              </NavLink>
+              <NavLink to={`/s/${schoolId}/settings`} className="side-link">
+                Settings
+              </NavLink>
+            </>
           )}
         </nav>
         <main className="ws-main">

@@ -1,4 +1,4 @@
-export type Role = 'owner' | 'admin' | 'teacher';
+export type Role = 'owner' | 'admin' | 'teacher' | 'bursar';
 export type Pronoun = 'she' | 'he' | 'they';
 export type Source = 'on_device' | 'in_cloud';
 
@@ -67,6 +67,7 @@ export interface School {
   /** Maximum characters for a report comment. */
   commentLimit?: number;
   policy?: Partial<SchoolPolicy>;
+  fees?: FeePolicy;
 }
 
 export interface Member {
@@ -136,7 +137,7 @@ export interface Guardian {
   language: string;
 }
 
-export interface StudentProfile {
+export interface StudentProfile extends StudentExtras {
   id: string;
   classId: string;
   name: string;
@@ -284,4 +285,205 @@ export interface PublishedResult {
   admissionNo: string;
   reports: Record<string, ReportCard>;
   updatedAt: number;
+}
+
+// ======================= v3 modules =======================
+
+/** Extra student fields used by fees, promotion and the behaviour log. */
+export interface StudentExtras {
+  status?: 'active' | 'alumni' | 'withdrawn';
+  graduatedSession?: string;
+  /** Students sharing a familyId are siblings (for sibling discounts). */
+  familyId?: string;
+  staffChild?: boolean;
+  /** Scholarship as a percentage of tuition (0–100). */
+  scholarshipPercent?: number;
+  medicalNotes?: string;
+  routeId?: string;
+}
+
+// ---------- Fees ----------
+export interface FeeItem {
+  id: string;
+  name: string;
+  amount: number; // naira
+  /** Levels this fee applies to; empty means every level. */
+  levels: string[];
+  optional: boolean;
+  /** Discounts (sibling, staff, scholarship) apply to this item. */
+  discountable: boolean;
+  createdAt: number;
+}
+export interface FeePolicy {
+  currency: string; // ₦
+  siblingPercent: number; // off discountable items for the 2nd child onwards
+  staffChildPercent: number;
+}
+export interface InvoiceLine {
+  name: string;
+  amount: number;
+}
+export interface Invoice {
+  id: string; // `${termId}_${studentId}`
+  termId: string;
+  studentId: string;
+  classId: string;
+  lines: InvoiceLine[];
+  discounts: InvoiceLine[];
+  arrears: number;
+  total: number;
+  paid: number;
+  balance: number;
+  optionalIds: string[];
+  updatedAt: number;
+}
+export interface Payment {
+  id: string;
+  termId: string;
+  studentId: string;
+  classId: string;
+  amount: number;
+  method: 'cash' | 'transfer' | 'pos' | 'online' | 'other';
+  reference: string;
+  payer: string;
+  date: string; // YYYY-MM-DD
+  receiptNo: string;
+  receivedBy: string;
+  readBy?: Source; // set when an AI read the receipt photo
+  at: number;
+}
+
+// ---------- Messages to parents ----------
+export interface ParentMessage {
+  id: string;
+  kind: 'absence' | 'fees' | 'results' | 'custom';
+  title: string;
+  recipients: { studentId: string; guardian: string; phone: string; language: string; text: string }[];
+  by: string;
+  byName: string;
+  at: number;
+}
+
+// ---------- Lesson notes and quizzes ----------
+export interface QuizQuestion {
+  question: string;
+  options: string[];
+  answer: number; // index into options
+  explanation: string;
+}
+export interface Lesson {
+  id: string;
+  subject: string;
+  level: string;
+  topic: string;
+  week: string;
+  objectives: string[];
+  notes: string;
+  quiz: QuizQuestion[];
+  source?: Source;
+  by: string;
+  byName: string;
+  at: number;
+}
+
+// ---------- Behaviour and health ----------
+export interface Incident {
+  id: string;
+  studentId: string;
+  classId: string;
+  kind: 'merit' | 'behaviour' | 'health';
+  note: string;
+  action: string;
+  date: string;
+  by: string;
+  byName: string;
+  at: number;
+}
+
+// ---------- Admissions ----------
+export interface Application {
+  id: string;
+  childName: string;
+  dob: string;
+  gender: string;
+  level: string;
+  previousSchool: string;
+  guardianName: string;
+  guardianPhone: string;
+  guardianEmail: string;
+  language: string;
+  notes: string;
+  status: 'new' | 'reviewing' | 'accepted' | 'declined';
+  at: number;
+}
+
+// ---------- Timetable ----------
+export interface TimetableSettings {
+  days: string[];
+  periods: { label: string; start: string; end: string; isBreak?: boolean }[];
+  /** Periods per week per subject name (default for every arm). */
+  perWeek: Record<string, number>;
+}
+export interface TimetableSlot {
+  day: number;
+  period: number;
+  offeringId: string;
+}
+export interface Timetable {
+  id: 'current';
+  settings: TimetableSettings;
+  /** Slots by arm id. */
+  slots: Record<string, TimetableSlot[]>;
+  unplaced: { offeringId: string; missing: number }[];
+  generatedAt: number;
+}
+
+// ---------- Staff leave ----------
+export interface LeaveRequest {
+  id: string;
+  uid: string;
+  name: string;
+  from: string;
+  to: string;
+  reason: string;
+  status: 'pending' | 'approved' | 'declined';
+  at: number;
+}
+
+// ---------- Library, transport, inventory ----------
+export interface Book {
+  id: string;
+  title: string;
+  author: string;
+  copies: number;
+  shelf: string;
+  at: number;
+}
+export interface Loan {
+  id: string;
+  bookId: string;
+  studentId: string;
+  studentName: string;
+  out: string;
+  due: string;
+  returned?: string;
+  at: number;
+}
+export interface BusRoute {
+  id: string;
+  name: string;
+  driver: string;
+  driverPhone: string;
+  stops: string;
+  fee: number;
+  at: number;
+}
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  quantity: number;
+  reorderAt: number;
+  location: string;
+  at: number;
 }

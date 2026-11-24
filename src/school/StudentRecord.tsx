@@ -8,6 +8,7 @@ import { LANGUAGES } from '../lib/ai';
 import { useToast } from '../ui/toast';
 import { useArm } from './useArm';
 import { ReportCardView } from '../components/ReportCardView';
+import { IncidentLog } from '../modules/IncidentLog';
 import { whatsappLink } from '../lib/share';
 import { useSchool } from './SchoolContext';
 
@@ -164,6 +165,8 @@ export function StudentRecord() {
             {p.resultPin && <p className="muted small">Result PIN for parents: <b className="pin">{p.resultPin}</b></p>}
           </section>
         )}
+
+        <IncidentLog studentId={p.id} classId={p.classId} studentName={p.name} />
 
         <section className="panel wide">
           <h2 className="h3">Reports by term</h2>

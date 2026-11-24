@@ -66,6 +66,7 @@ export function StaffPage() {
             <span className="mono">Role</span>
             <select value={role} onChange={(e) => setRole(e.target.value as Invite['role'])}>
               <option value="teacher">Teacher</option>
+              <option value="bursar">Bursar (fees only)</option>
               <option value="admin">Admin (sees everything)</option>
             </select>
           </label>
@@ -131,6 +132,7 @@ export function StaffPage() {
                   ) : (
                     <select value={m.role} onChange={(e) => updateMember(schoolId, m.uid, { role: e.target.value as Role }).catch(fail)}>
                       <option value="teacher">Teacher</option>
+                      <option value="bursar">Bursar (fees only)</option>
                       <option value="admin">Admin</option>
                     </select>
                   )}

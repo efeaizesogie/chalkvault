@@ -103,7 +103,7 @@ service cloud.firestore {
       }
 
       match /students/{studentId} {
-        allow read: if resource == null || seesClass(resource.data.classId);
+        allow read: if resource == null || seesClass(resource.data.classId) || (isMember() && me().role == 'bursar');
         allow create: if managesStudents(request.resource.data.classId);
         allow update: if managesStudents(resource.data.classId) && managesStudents(request.resource.data.classId);
         allow delete: if managesStudents(resource.data.classId);
@@ -136,6 +136,61 @@ service cloud.firestore {
           || (policy().get('attendanceBy', 'form') == 'subject' && teachesOffering(request.resource.data.get('offeringId', '')));
         allow delete: if isAdmin();
       }
+
+      // ===== v3 modules =====
+      function isFinance() { return isMember() && me().role in ['owner', 'admin', 'bursar']; }
+
+      // Fees: owners, admins and bursars.
+      match /feeItems/{id} { allow read: if isMember(); allow write: if isFinance(); }
+      match /invoices/{id} { allow read, write: if isFinance(); }
+      match /payments/{id} { allow read, write: if isFinance(); }
+
+      // Messages to parents: any member can log what they sent; admins see all, others their own.
+      match /messages/{id} {
+        allow create: if isMember() && request.resource.data.by == request.auth.uid;
+        allow read: if isAdmin() || (isMember() && resource.data.by == request.auth.uid);
+        allow delete: if isAdmin();
+      }
+
+      // Lesson notes and quizzes: shared with all staff; authors and admins edit.
+      match /lessons/{id} {
+        allow read: if isMember();
+        allow create: if isMember() && request.resource.data.by == request.auth.uid;
+        allow update, delete: if isAdmin() || (isMember() && resource.data.by == request.auth.uid);
+      }
+
+      // Behaviour and health log: staff who can see the student's arm.
+      match /incidents/{id} {
+        allow read: if isAdmin() || (resource != null && (formOf(resource.data.classId) || resource.data.by == request.auth.uid));
+        allow create: if seesClass(request.resource.data.classId) && request.resource.data.by == request.auth.uid;
+        allow delete: if isAdmin() || (isMember() && resource.data.by == request.auth.uid);
+      }
+
+      // Admissions: anyone may submit an application (no account); only admins read and manage them.
+      match /applications/{id} {
+        allow create: if request.resource.data.status == 'new'
+          && request.resource.data.keys().hasOnly(['id', 'childName', 'dob', 'gender', 'level', 'previousSchool', 'guardianName', 'guardianPhone', 'guardianEmail', 'language', 'notes', 'status', 'at'])
+          && request.resource.data.childName is string && request.resource.data.childName.size() < 120
+          && request.resource.data.notes is string && request.resource.data.notes.size() < 2000;
+        allow read, update, delete: if isAdmin();
+      }
+
+      // Timetable: everyone reads; admins generate.
+      match /timetable/{id} { allow read: if isMember(); allow write: if isAdmin(); }
+
+      // Staff leave: staff request their own; admins approve.
+      match /leave/{id} {
+        allow create: if isMember() && request.resource.data.uid == request.auth.uid && request.resource.data.status == 'pending';
+        allow read: if isAdmin() || (isMember() && resource.data.uid == request.auth.uid);
+        allow update: if isAdmin();
+        allow delete: if isAdmin() || (isMember() && resource.data.uid == request.auth.uid && resource.data.status == 'pending');
+      }
+
+      // Library, transport and inventory: all staff read; admins manage. Staff can lend and return books.
+      match /books/{id} { allow read: if isMember(); allow write: if isAdmin(); }
+      match /loans/{id} { allow read, write: if isMember(); }
+      match /routes/{id} { allow read: if isMember(); allow write: if isAdmin(); }
+      match /inventory/{id} { allow read: if isMember(); allow write: if isAdmin(); }
 
       // Notice board.
       match /notices/{noticeId} {

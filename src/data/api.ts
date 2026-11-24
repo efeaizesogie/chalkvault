@@ -151,7 +151,8 @@ export async function updateSchool(schoolId: string, patch: Partial<Omit<School,
 /** Deletes a school and its records. Only the owner can do this (enforced by rules). */
 export async function deleteSchool(schoolId: string, ownerUid: string) {
   const db = getDb();
-  for (const col of [paths.records, paths.subjectRecords, paths.attendance, paths.offerings, paths.notices, paths.students, paths.classes, paths.terms, paths.invites, paths.ledger]) {
+  const modules: ModuleName[] = ['feeItems', 'invoices', 'payments', 'messages', 'lessons', 'incidents', 'applications', 'timetable', 'leave', 'books', 'loans', 'routes', 'inventory'];
+  for (const col of [paths.records, paths.subjectRecords, paths.attendance, paths.offerings, paths.notices, ...modules.map((m) => (s: string) => mod(s, m)), paths.students, paths.classes, paths.terms, paths.invites, paths.ledger]) {
     const snap = await getDocs(col(schoolId));
     for (let i = 0; i < snap.docs.length; i += 400) {
       const b = writeBatch(db);
@@ -375,6 +376,36 @@ export async function publishResult(r: PublishedResult) {
 export async function readResult(pin: string) {
   const snap = await getDoc(paths.result(pin.trim().toUpperCase()));
   return snap.exists() ? (snap.data() as PublishedResult) : null;
+}
+
+// ---------- Generic module collections (fees, lessons, library…) ----------
+export type ModuleName =
+  | 'feeItems'
+  | 'invoices'
+  | 'payments'
+  | 'messages'
+  | 'lessons'
+  | 'incidents'
+  | 'applications'
+  | 'timetable'
+  | 'leave'
+  | 'books'
+  | 'loans'
+  | 'routes'
+  | 'inventory';
+export const mod = (s: string, name: ModuleName) => collection(getDb(), 'schools', s, name);
+export const modDoc = (s: string, name: ModuleName, id: string) => doc(getDb(), 'schools', s, name, id);
+/** Create or replace a document in a module collection. Gives it an id if it has none. */
+export async function saveIn<T extends { id?: string }>(s: string, name: ModuleName, obj: T): Promise<T & { id: string }> {
+  const withId = { ...obj, id: obj.id || uid() } as T & { id: string };
+  await setDoc(modDoc(s, name, withId.id), JSON.parse(JSON.stringify(withId)));
+  return withId;
+}
+export async function patchIn(s: string, name: ModuleName, id: string, patch: Record<string, unknown>) {
+  await updateDoc(modDoc(s, name, id), JSON.parse(JSON.stringify(patch)));
+}
+export async function removeIn(s: string, name: ModuleName, id: string) {
+  await deleteDoc(modDoc(s, name, id));
 }
 
 // ---------- Ledger ----------
