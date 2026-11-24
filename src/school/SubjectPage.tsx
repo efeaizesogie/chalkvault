@@ -311,7 +311,7 @@ export function SubjectPage() {
           {pending && (
             <div className="slip local import-map">
               <p className="slip-local">
-                {pending.source && <SourceStamp source={pending.source} ms={pending.ms} />}
+                {pending.source && <SourceStamp source={pending.source} ms={pending.ms} namesSent />}
                 Found scores for {pending.rows.length} of {students.length} students{pending.from === 'photo' ? ' in the photo' : ' in the file'}. Check them below, then save.
               </p>
               {pending.unmatched.length > 0 && <p className="muted small">Couldn’t match: {pending.unmatched.join(', ')}.</p>}

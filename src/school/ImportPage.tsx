@@ -8,6 +8,7 @@ import { PAGE_KIND_LABEL, PrivacyBlock, readRecordPage } from '../lib/ai';
 import { friendlyError } from '../lib/errors';
 import { buildPlan, tableToReadings, type ImportPage as Page, type Plan } from '../lib/importPlan';
 import { readTable } from '../lib/sheetImport';
+import { pdfToImages } from '../lib/pdfPages';
 import { assessmentsOf } from '../lib/results';
 import { naira } from '../lib/fees';
 import { getDb } from '../lib/firebase';
@@ -49,6 +50,21 @@ export function ImportPage() {
 
   const patchPage = (id: string, p: Partial<Page>) => setPages((xs) => xs.map((x) => (x.id === id ? { ...x, ...p } : x)));
 
+  /** Sort and read one page image, then record in the ledger where it ran. */
+  const readImage = async (page: Page, img: { base64: string; mimeType: 'image/jpeg' }) => {
+    patchPage(page.id, { status: 'reading' });
+    const res = await readRecordPage(img, { levels: school.levels, subjects: school.subjects, columns }, allowCloud);
+    const done: Page = { ...page, status: 'done', reading: res, source: res.source, ms: res.ms };
+    patchPage(page.id, done);
+    await ws.log({
+      task: 'Document import',
+      source: res.source,
+      charsSent: res.source === 'in_cloud' ? img.base64.length : 0,
+      detail: res.source === 'on_device' ? `Gemini Nano sorted and read “${page.file}” on this device in ${(res.ms / 1000).toFixed(1)} s. Nothing was sent.` : `“${page.file}” was sent to the cloud to be read, because cloud scanning is switched on.`,
+    });
+    return done;
+  };
+
   const addFiles = async (files: FileList | null) => {
     if (!files?.length) return;
     setDone(null);
@@ -69,20 +85,27 @@ export function ImportPage() {
         } else if (file.type.startsWith('image/')) {
           const img = await prepImage(file);
           patchPage(page.id, { thumb: img.thumb });
-          const res = await readRecordPage(img, { levels: school.levels, subjects: school.subjects, columns }, allowCloud);
-          const done: Page = { ...page, thumb: img.thumb, status: 'done', reading: res, source: res.source, ms: res.ms };
-          patchPage(page.id, done);
-          readings.push(done);
-          await ws.log({
-            task: 'Document import',
-            source: res.source,
-            charsSent: res.source === 'in_cloud' ? img.base64.length : 0,
-            detail: res.source === 'on_device' ? `Gemini Nano sorted and read “${file.name}” on this device in ${(res.ms / 1000).toFixed(1)} s. Nothing was sent.` : `“${file.name}” was sent to the cloud to be read, because cloud scanning is switched on.`,
-          });
-        } else if (/\.pdf$/i.test(file.name)) {
-          throw new Error('PDFs aren’t read yet. Take a photo or screenshot of each page instead.');
+          readings.push(await readImage({ ...page, thumb: img.thumb }, img));
+        } else if (/\.pdf$/i.test(file.name) || file.type === 'application/pdf') {
+          // Each page of the PDF becomes its own item, rendered to an image here and read like a photo.
+          const { pages: imgs, skipped } = await pdfToImages(file, (n, total) => patchPage(page.id, { file: `${file.name} (preparing page ${n} of ${total})` }));
+          if (!imgs.length) throw new Error('This PDF has no pages.');
+          const parts: Page[] = imgs.map((img, i) => ({ id: `${page.id}-${i}`, file: `${file.name}, page ${i + 1}`, thumb: img.thumb, status: 'waiting' }));
+          setPages((xs) => xs.flatMap((x) => (x.id === page.id ? parts : [x])));
+          if (skipped) toast(`Only the first ${imgs.length} pages of ${file.name} were added. Add the rest as a second file.`);
+          for (const [i, part] of parts.entries()) {
+            try {
+              readings.push(await readImage(part, imgs[i]));
+            } catch (e) {
+              patchPage(part.id, { status: 'error', error: e instanceof PrivacyBlock ? e.message : friendlyError(e) });
+              if (e instanceof PrivacyBlock) {
+                for (const rest of parts.slice(i + 1)) patchPage(rest.id, { status: 'error', error: 'Not read, for the same reason.' });
+                break;
+              }
+            }
+          }
         } else {
-          throw new Error('This kind of file can’t be read. Use photos, CSV or Excel.');
+          throw new Error('This kind of file can’t be read. Use photos, PDFs, CSV or Excel.');
         }
       } catch (e) {
         patchPage(page.id, { status: 'error', error: e instanceof PrivacyBlock ? e.message : friendlyError(e) });
@@ -203,7 +226,7 @@ export function ImportPage() {
         <div>
           <h1 className="display-sm">Bring in your records</h1>
           <p className="lede">
-            Photograph class lists, score sheets, fee ledgers and staff lists, handwritten or typed, or drop in Excel and CSV files. Each photo is sorted and read {ws.device === 'available' ? 'by Gemini Nano on this computer, so no page leaves the device' : allowCloud ? 'in the cloud, because your school allows cloud scanning' : 'by Gemini Nano on this computer'}. Nothing is saved until you check it.
+            Photograph class lists, score sheets, fee ledgers and staff lists, handwritten or typed, or drop in PDFs, Excel and CSV files. Each page is sorted and read {ws.device === 'available' ? 'by Gemini Nano on this computer, so no page leaves the device' : allowCloud ? 'in the cloud, because your school allows cloud scanning' : 'by Gemini Nano on this computer'}. Nothing is saved until you check it.
           </p>
         </div>
       </header>
@@ -215,9 +238,9 @@ export function ImportPage() {
       )}
 
       <label className={`drop ${busy ? 'busy' : ''}`}>
-        <input type="file" multiple accept="image/*,.csv,.xlsx,.xlsm" disabled={busy} onChange={(e) => addFiles(e.currentTarget.files).finally(() => (e.target.value = ''))} />
-        <b>{busy ? 'Reading pages…' : 'Choose photos or spreadsheets'}</b>
-        <span className="muted small">One photo per page. You can add more at any time before saving.</span>
+        <input type="file" multiple accept="image/*,application/pdf,.pdf,.csv,.xlsx,.xlsm" disabled={busy} onChange={(e) => addFiles(e.currentTarget.files).finally(() => (e.target.value = ''))} />
+        <b>{busy ? 'Reading pages…' : 'Choose photos, PDFs or spreadsheets'}</b>
+        <span className="muted small">One photo per page; a PDF is split into its pages. You can add more at any time before saving.</span>
       </label>
 
       {pages.length > 0 && (
@@ -240,7 +263,7 @@ export function ImportPage() {
                   )}
                 </span>
               </span>
-              {p.source && p.source !== 'file' && <SourceStamp source={p.source} ms={p.ms} />}
+              {p.source && p.source !== 'file' && <SourceStamp source={p.source} ms={p.ms} namesSent />}
             </li>
           ))}
         </ol>

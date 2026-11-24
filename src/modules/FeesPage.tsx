@@ -662,7 +662,7 @@ function Payments(props: {
         </div>
         {read && (
           <p className="slip-local">
-            <SourceStamp source={read.source} ms={read.ms} /> {read.matched ? 'Filled in from the receipt and matched to a student. Check before saving.' : 'Filled in from the receipt. Choose the student.'}
+            <SourceStamp source={read.source} ms={read.ms} namesSent /> {read.matched ? 'Filled in from the receipt and matched to a student. Check before saving.' : 'Filled in from the receipt. Choose the student.'}
           </p>
         )}
         <label className="field">

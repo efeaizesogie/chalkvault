@@ -866,13 +866,27 @@ export interface PageReading {
   staff: ImportedStaff[];
 }
 
-function pageModel(local: boolean, schema: object) {
-  return getGenerativeModel(
-    ai(),
-    local
-      ? { mode: InferenceMode.ONLY_ON_DEVICE, onDeviceParams: { createOptions, promptOptions: { responseConstraint: schema } } }
-      : { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { responseMimeType: 'application/json', temperature: 0 } } },
-  );
+/** One page request: on the device with the schema as a constraint, or in the cloud with retries and a fallback model. */
+async function askPage(local: boolean, schema: object, request: Parameters<GenerativeModel['generateContent']>[0]) {
+  if (local) return getGenerativeModel(ai(), { mode: InferenceMode.ONLY_ON_DEVICE, onDeviceParams: { createOptions, promptOptions: { responseConstraint: schema } } }).generateContent(request);
+  let last: unknown;
+  for (const name of CLOUD_MODELS) {
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        return await getGenerativeModel(ai(), { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: name, generationConfig: { responseMimeType: 'application/json', temperature: 0 } } }).generateContent(request);
+      } catch (e) {
+        last = e;
+        if (isMissingModel(e)) break;
+        if (!isBusy(e)) throw e;
+        await sleep(1500 * (attempt + 1));
+      }
+    }
+  }
+  throw last;
+}
+/** On the device the schema constrains the output; in the cloud it goes in the prompt so the keys match. */
+function shapeNote(local: boolean, schema: object) {
+  return local ? '' : `\n\nReply with JSON only, matching this JSON Schema exactly (same keys):\n${JSON.stringify(schema)}`;
 }
 function parseJson<T>(text: string): T {
   return JSON.parse(text.trim().replace(/^```(?:json)?|```$/g, '')) as T;
@@ -898,7 +912,7 @@ export async function readRecordPage(
 
   // 1. What kind of page is this?
   const kindSchema = { type: 'object', properties: { kind: { type: 'string', enum: [...PAGE_KINDS] } }, required: ['kind'] };
-  const sort = await pageModel(local, kindSchema).generateContent([
+  const sort = await askPage(local, kindSchema, [
     {
       type: 'text',
       text: [
@@ -910,6 +924,7 @@ export async function readRecordPage(
         'fee_ledger: fees, payments or balances per pupil.',
         'staff_list: a list of teachers or staff.',
         'other: anything else.',
+        shapeNote(local, kindSchema),
       ].join('\n'),
     },
     img,
@@ -947,7 +962,7 @@ export async function readRecordPage(
   ]
     .filter(Boolean)
     .join('\n');
-  const read = await pageModel(local, schema).generateContent([{ type: 'text', text: guide }, img]);
+  const read = await askPage(local, schema, [{ type: 'text', text: guide + shapeNote(local, schema) }, img]);
   const raw = parseJson<{ className?: string; subject?: string; students?: ImportedStudent[]; staff?: ImportedStaff[] }>(read.response.text());
   const clean = (s: unknown) => (typeof s === 'string' ? s.trim() : '');
   const students = (raw.students ?? [])
