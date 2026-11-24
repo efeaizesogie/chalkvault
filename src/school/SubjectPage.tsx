@@ -36,7 +36,7 @@ export function SubjectPage() {
     allowed && termId ? query(paths.subjectRecords(schoolId), where('offeringId', '==', offeringId), where('termId', '==', termId)) : null,
     `sub-rec:${offeringId}:${termId}:${allowed}`,
   );
-  const students = useMemo(() => (o ? rosterOf(o, [...armStudents.data].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))) : []), [o, armStudents.data]);
+  const students = useMemo(() => (o ? rosterOf(o, [...armStudents.data.filter((s) => (s.status ?? 'active') === 'active')].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name))) : []), [o, armStudents.data]);
   const byStudent = useMemo(() => new Map(recs.data.map((r) => [r.studentId, r])), [recs.data]);
 
   const [edits, setEdits] = useState<Record<string, string>>({});
@@ -239,7 +239,7 @@ export function SubjectPage() {
 
       {tab === 'register' && <AttendanceView cls={cls} students={students} ws={ws} offering={o} />}
 
-      {tab === 'students' && <RosterEditor offering={o} armStudents={[...armStudents.data].sort((a, b) => a.name.localeCompare(b.name))} canEdit={isAdmin} />}
+      {tab === 'students' && <RosterEditor offering={o} armStudents={[...armStudents.data.filter((s) => (s.status ?? 'active') === 'active')].sort((a, b) => a.name.localeCompare(b.name))} canEdit={isAdmin} />}
 
       {tab === 'scores' && (
         <section className="scores">

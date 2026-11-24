@@ -1,0 +1,75 @@
+/* Shared styles for the operations screens: library, transport, inventory, leave, alumni. */
+
+/* Student search results */
+.ops-pick {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  display: grid;
+  gap: 2px;
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  background: var(--sheet);
+  max-height: 240px;
+  overflow-y: auto;
+}
+.ops-pick li { margin: 0; }
+.ops-pick button {
+  width: 100%;
+  text-align: left;
+  background: transparent;
+  border: 0;
+  padding: 8px 12px;
+  cursor: pointer;
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  align-items: baseline;
+  border-radius: 10px;
+  color: var(--ink);
+  font-family: var(--sans);
+}
+.ops-pick button:hover { background: var(--paper-2); }
+
+/* Overdue loans */
+.gradebook tr.ops-overdue td { color: var(--danger); }
+.ops-num { font-variant-numeric: tabular-nums; }
+
+/* Low-stock panel accent */
+.panel.ops-low { border-color: var(--danger); }
+
+/* Printable rider list (plain list, so print styles keep it visible) */
+.ops-riders { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.ops-riders li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 6px;
+}
+.ops-riders .muted { font-variant-numeric: tabular-nums; }
+
+/* Who is away / small chip rows */
+.ops-chiprow { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.chip.ops-danger { border-color: var(--danger); color: var(--danger); }
+
+/* Stock plus/minus */
+.ops-adjust { display: inline-flex; gap: 6px; align-items: center; }
+.ops-adjust button {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  border: 1px solid var(--ink);
+  background: var(--sheet);
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  color: var(--ink);
+}
+.ops-adjust button:hover:not(:disabled) { background: var(--paper-2); }
+.ops-adjust button:disabled { opacity: 0.4; cursor: default; }
+
+/* Grouped sections (alumni by session) */
+.ops-group { display: grid; gap: 10px; margin-bottom: 8px; }
+.ops-group > h2 { margin: 0; }

@@ -8,7 +8,7 @@ import { useSchool } from './SchoolContext';
 export function ClassesPage() {
   const { schoolId, school, classes, offerings, members } = useSchool();
   const students = useQuery<StudentProfile>(paths.students(schoolId), `all-students:${schoolId}`);
-  const count = (classId: string) => students.data.filter((s) => s.classId === classId).length;
+  const count = (classId: string) => students.data.filter((s) => s.classId === classId && (s.status ?? 'active') === 'active').length;
   const levels = [...school.levels, ...new Set(classes.map((c) => c.level).filter((l) => !school.levels.includes(l)))];
 
   return (

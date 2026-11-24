@@ -39,7 +39,8 @@ function AdminDashboard() {
   const formRecs = useQuery<TermRecord>(termId ? query(paths.records(schoolId), where('termId', '==', termId)) : null, `dash-rec:${termId}`);
   const notices = useNotices();
 
-  const byClass = (id: string) => students.data.filter((s) => s.classId === id);
+  const active = students.data.filter((s) => (s.status ?? 'active') === 'active');
+  const byClass = (id: string) => active.filter((s) => s.classId === id);
   // Today's attendance: arms with a register (form) or any lesson register (subject) today.
   const registersToday = new Set(today.data.map((d) => d.classId));
   let present = 0;
@@ -56,16 +57,16 @@ function AdminDashboard() {
   const approved = formRecs.data.filter((r) => r.status === 'approved').length;
   const waiting = formRecs.data.filter((r) => r.status === 'submitted');
   const flagged = formRecs.data.filter((r) => r.draft?.supportFlag && r.draft.supportFlag !== 'none');
-  const names = new Map(students.data.map((s) => [s.id, s.name]));
+  const names = new Map(active.map((s) => [s.id, s.name]));
 
   return (
     <div className="page">
-      <Greeting line={`${school.name}: ${students.data.length} students in ${classes.length} arms, ${members.length} staff.`} />
+      <Greeting line={`${school.name}: ${active.length} students in ${classes.length} arms, ${members.length} staff.`} />
 
       <section className="stat-grid" aria-label="This term at a glance">
         <Stat label="Attendance today" value={marked ? `${Math.round((present / marked) * 100)}%` : 'Not taken'} note={`${registersToday.size} of ${classes.length} arms have a register today`} to={`/s/${schoolId}/classes`} />
         <Stat label="Scores entered" value={expected ? `${Math.round((entered / expected) * 100)}%` : '0%'} note={`${entered} of ${expected} subject scores this term`} to={`/s/${schoolId}/classes`} />
-        <Stat label="Form comments" value={`${comments} of ${students.data.length}`} note={`${approved} approved`} to={`/s/${schoolId}/results`} />
+        <Stat label="Form comments" value={`${comments} of ${active.length}`} note={`${approved} approved`} to={`/s/${schoolId}/results`} />
         <Stat label="Gaps in staffing" value={`${unstaffed + noForm}`} note={`${unstaffed} subjects without a teacher, ${noForm} arms without a form teacher`} to={`/s/${schoolId}/staff`} />
       </section>
 
@@ -79,7 +80,7 @@ function AdminDashboard() {
             <span className="mono">02</span>
             <Link to={`/s/${schoolId}/staff`}>Invite teachers and assign their subjects and form classes</Link>
           </li>
-          <li className={students.data.length ? 'done' : ''}>
+          <li className={active.length ? 'done' : ''}>
             <span className="mono">03</span>
             <Link to={`/s/${schoolId}/classes`}>Add students to each arm</Link>
           </li>

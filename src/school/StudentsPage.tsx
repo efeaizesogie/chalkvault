@@ -33,7 +33,7 @@ export function StudentsPage() {
 function ClassStudents({ cls, q }: { cls: ClassRoom; q: string }) {
   const { schoolId } = useSchool();
   const s = useQuery<StudentProfile>(query(paths.students(schoolId), where('classId', '==', cls.id)), `sp:${cls.id}`);
-  const rows = s.data
+  const rows = s.data.filter((x) => (x.status ?? 'active') === 'active')
     .filter((x) => !q || x.name.toLowerCase().includes(q) || x.admissionNo.toLowerCase().includes(q))
     .sort((a, b) => a.name.localeCompare(b.name));
   if (q && rows.length === 0) return null;
@@ -42,7 +42,7 @@ function ClassStudents({ cls, q }: { cls: ClassRoom; q: string }) {
     <section className="roster">
       <h2 className="roster-head">
         <span className="swatch-dot" style={{ ['--c' as string]: col.bg }} aria-hidden /> {cls.name}
-        <span className="mono muted">{s.data.length} students</span>
+        <span className="mono muted">{s.data.filter((x) => (x.status ?? 'active') === 'active').length} students</span>
       </h2>
       <ol className="rows">
         {rows.map((x) => (

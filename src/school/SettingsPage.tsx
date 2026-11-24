@@ -10,6 +10,7 @@ import { AddClassDialog } from '../components/AddClassDialog';
 import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
+import { SessionTools } from './SessionTools';
 
 export function SettingsPage() {
   const { school, schoolId, terms, term, classes, offerings, members, me, policy } = useSchool();
@@ -282,6 +283,8 @@ export function SettingsPage() {
             <input inputMode="numeric" value={limit} onChange={(e) => setLimit(e.target.value)} />
           </label>
         </section>
+
+        <SessionTools />
 
         <section className="panel wide danger-zone">
           <h2 className="h3">Your data</h2>

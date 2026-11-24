@@ -27,7 +27,7 @@ export function useArm(classId: string, enabled = true) {
     `arm-att:${classId}:${termId}:${on}`,
   );
   const armOfferings = useMemo(() => offerings.filter((o) => o.classId === classId), [offerings, classId]);
-  const sortedStudents = useMemo(() => [...students.data].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)), [students.data]);
+  const sortedStudents = useMemo(() => [...students.data.filter((s) => (s.status ?? 'active') === 'active')].sort((a, b) => a.order - b.order || a.name.localeCompare(b.name)), [students.data]);
 
   // Subject-by-subject registers collapse to one mark per day: present if marked present or late in any lesson.
   const days = useMemo(() => {
