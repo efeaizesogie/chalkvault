@@ -660,14 +660,24 @@ export async function askSchool(opts: {
     .join('\n\n');
 
   const t0 = performance.now();
-  const res = await askModel.generateContentStream(prompt);
   let text = '';
   const source: Source = local ? 'on_device' : 'in_cloud';
-  for await (const chunk of res.stream) {
-    text += chunk.text();
-    opts.onText(show(text), source);
+  // A cloud stream now and then fails to parse before any text arrives; one quiet retry covers it.
+  let final;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await askModel.generateContentStream(prompt);
+      for await (const chunk of res.stream) {
+        text += chunk.text();
+        opts.onText(show(text), source);
+      }
+      final = await res.response;
+      break;
+    } catch (e) {
+      if (attempt > 0 || text) throw e;
+      text = '';
+    }
   }
-  const final = await res.response;
   const actual: Source = final.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device';
   return { answer: show(text), source: actual, sent: actual === 'in_cloud' ? prompt : '', ms: performance.now() - t0 };
 }

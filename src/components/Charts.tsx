@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import './charts.css';
 
@@ -29,7 +29,7 @@ export function ChartCard({ title, note, series, table, children, action }: { ti
         <ul className="legend" aria-label="Legend">
           {series.map((s) => (
             <li key={s.name}>
-              <i className={`swatch ${s.tone}`} aria-hidden />
+              <i className={`key-dot ${s.tone}`} aria-hidden />
               {s.name}
             </li>
           ))}
@@ -70,7 +70,7 @@ function TipBox({ tip }: { tip: Tip }) {
       <b>{tip.title}</b>
       {tip.lines.map((l) => (
         <span key={l.s.name}>
-          <i className={`swatch ${l.s.tone}`} aria-hidden />
+          <i className={`key-dot ${l.s.tone}`} aria-hidden />
           {l.s.name}: {l.v}
         </span>
       ))}
@@ -110,16 +110,18 @@ export function BarRows({ rows, series, max, unit = '%' }: { rows: { label: stri
   );
 }
 
+/** Width of an element, kept up to date. A callback ref, so it attaches even when the element appears later. */
 function useWidth<T extends HTMLElement>() {
-  const ref = useRef<T>(null);
-  const [w, setW] = useState(560);
+  const [el, setEl] = useState<T | null>(null);
+  const [w, setW] = useState(0);
   useEffect(() => {
-    if (!ref.current) return;
-    const ro = new ResizeObserver(([e]) => setW(Math.max(240, Math.round(e.contentRect.width))));
-    ro.observe(ref.current);
+    if (!el) return;
+    setW(Math.round(el.getBoundingClientRect().width));
+    const ro = new ResizeObserver(([e]) => setW(Math.round(e.contentRect.width)));
+    ro.observe(el);
     return () => ro.disconnect();
-  }, []);
-  return [ref, w] as const;
+  }, [el]);
+  return [setEl, Math.max(240, w || 240)] as const;
 }
 
 /** A line over time (0 to 100%) with markers, a crosshair and a tooltip. Two series share one axis. */

@@ -1,16 +1,16 @@
 /* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
 /* critique: charts follow the dataviz method: two validated series colours, thin marks, hairline grid, legend and table view, values in ink */
 .chart-card { position: relative; align-content: start; }
-.chart-tools { display: flex; gap: 14px; align-items: center; }
+.chart-tools { display: flex; gap: 14px; align-items: center; white-space: nowrap; }
 .chart-note { margin: -6px 0 0; }
 .legend { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
 .legend li { display: inline-flex; align-items: center; gap: 6px; }
-.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
-.swatch.now { background: var(--series-now); }
-.swatch.before { background: var(--series-before); }
+.key-dot { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.key-dot.now { background: var(--series-now); }
+.key-dot.before { background: var(--series-before); }
 
 .bar-rows { position: relative; display: grid; gap: 8px; }
-.bar-row { display: grid; grid-template-columns: minmax(84px, 30%) 1fr 64px; gap: 10px; align-items: center; font-size: 14px; padding: 2px 0; }
+.bar-row { display: grid; grid-template-columns: minmax(96px, 36%) minmax(0, 1fr) 56px; gap: 10px; align-items: center; font-size: 14px; padding: 2px 0; }
 .bar-row:hover { background: var(--paper); }
 .bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .bar-track { display: grid; gap: 2px; }
@@ -20,7 +20,7 @@
 .bar-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
 
 .line-chart { position: relative; width: 100%; }
-.line-chart svg { display: block; overflow: visible; }
+.line-chart svg { display: block; max-width: 100%; }
 .line-chart .grid { stroke: var(--rule); stroke-width: 1; }
 .line-chart .baseline { stroke: var(--ink-2); stroke-width: 1; }
 .line-chart .crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }

@@ -8,9 +8,10 @@ import { askSchool, PrivacyBlock } from '../lib/ai';
 import { friendlyError } from '../lib/errors';
 import { naira } from '../lib/fees';
 import { rosterOf } from '../lib/reportCards';
-import { summaryText, type StudentRisk } from '../lib/termStats';
+import { summaryText, weekOf, type StudentRisk } from '../lib/termStats';
 import { BarRows, ChartCard, Columns, Figure, LineChart, type Series } from '../components/Charts';
 import { SourceStamp } from '../components/SourceStamp';
+import { Prose } from '../components/Prose';
 import { useSchool } from './SchoolContext';
 import { useSavedSummary, useTermStats } from './useTermStats';
 import { NoticeList, useNotices } from './NoticesPage';
@@ -40,6 +41,8 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
   const armName = (id: string) => classes.find((c) => c.id === id)?.name ?? 'An arm';
   const active = students.data.filter((x) => (x.status ?? 'active') === 'active');
   const names = new Map(active.map((x) => [x.id, x.name]));
+  // Arms with students; empty arms would only add blank rows to the charts.
+  const peopled = classes.filter((c) => active.some((x) => x.classId === c.id));
   const series: Series[] = prevTerm && before ? [{ name: term?.name ?? 'This term', tone: 'now' }, { name: `${prevTerm.name}${prevTerm.session && prevTerm.session !== term?.session ? `, ${prevTerm.session}` : ''}`, tone: 'before' }] : [{ name: term?.name ?? 'This term', tone: 'now' }];
   const two = series.length > 1;
   const pair = (a: number | null | undefined, b: number | null | undefined) => (two ? [a ?? null, b ?? null] : [a ?? null]);
@@ -73,7 +76,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
 
   // Staff completion per arm: scores and form comments.
   const byClass = (id: string) => active.filter((x) => x.classId === id);
-  const completion = classes.map((c) => {
+  const completion = peopled.map((c) => {
     let exp = 0;
     for (const o of offerings.filter((o) => o.classId === c.id)) exp += rosterOf(o, byClass(c.id)).length;
     const got = now.subjectRecords.filter((r) => r.classId === c.id && Object.keys(r.scores ?? {}).length).length;
@@ -103,6 +106,20 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
     lines.push(`Today: ${todayPct === null ? 'no registers taken yet' : `${todayPct}% present`}, registers in ${registersToday.size} of ${classes.length} arms.`);
     lines.push(`Staffing: ${unstaffed} subjects without a teacher, ${noForm} arms without a form teacher. ${waiting.length} form comments waiting for approval.`);
     if (risks.length) lines.push(`Students needing attention: ${risks.slice(0, 25).map((r) => `${r.name} (${armName(r.classId)}): ${r.reasons.join('; ')}`).join('. ')}.`);
+    // Week by week for each arm, so a dip can be traced to the arms behind it.
+    const armWeeks = peopled
+      .map((c) => {
+        const wk = new Map<string, { p: number; n: number }>();
+        for (const d of now.attendance.filter((x) => x.classId === c.id && !x.offeringId)) {
+          const k = weekOf(d.date);
+          const cur = wk.get(k) ?? { p: 0, n: 0 };
+          for (const m of Object.values(d.marks)) (cur.n++, m !== 'A' && cur.p++);
+          wk.set(k, cur);
+        }
+        return wk.size ? `${c.name}: ${[...wk].sort().map(([k, v]) => `week of ${k} ${Math.round((v.p / v.n) * 100)}%`).join(', ')}` : '';
+      })
+      .filter(Boolean);
+    if (armWeeks.length) lines.push(`Weekly attendance by arm:\n${armWeeks.join('\n')}`);
     if (feeByArm.length) lines.push(`Fees by arm: ${feeByArm.map((f) => `${f.c.name} ${Math.round((f.paid / f.total) * 100)}% collected, ${f.owing} owing`).join('; ')}.`);
     return lines.join('\n\n');
   };
@@ -151,7 +168,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
         </div>
         {brief ? (
           <div className="brief-text">
-            {brief.a || <span className="muted">Reading this term’s figures…</span>}
+            {brief.a ? <Prose text={brief.a} /> : <span className="muted">Reading this term’s figures…</span>}
             {brief.busy && <span className="caret" aria-hidden />}
           </div>
         ) : (
@@ -197,9 +214,9 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
         <ChartCard
           title="Attendance by arm"
           series={series}
-          table={{ head: ['Arm', ...series.map((x) => x.name)], rows: classes.map((c) => [c.name, ...pair(s?.attendanceByArm[c.id], before?.attendanceByArm[c.id]).map((v) => (v === null ? '' : `${v}%`))]) }}
+          table={{ head: ['Arm', ...series.map((x) => x.name)], rows: peopled.map((c) => [c.name, ...pair(s?.attendanceByArm[c.id], before?.attendanceByArm[c.id]).map((v) => (v === null ? '' : `${v}%`))]) }}
         >
-          <BarRows max={100} series={series} rows={classes.map((c) => ({ label: c.name, to: `/s/${schoolId}/classes/${c.id}?tab=register`, values: pair(s?.attendanceByArm[c.id], before?.attendanceByArm[c.id]) }))} />
+          <BarRows max={100} series={series} rows={peopled.map((c) => ({ label: c.name, to: `/s/${schoolId}/classes/${c.id}?tab=register`, values: pair(s?.attendanceByArm[c.id], before?.attendanceByArm[c.id]) }))} />
         </ChartCard>
 
         <ChartCard
@@ -215,9 +232,9 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
         <ChartCard
           title="Arm averages"
           series={series}
-          table={{ head: ['Arm', ...series.map((x) => x.name)], rows: classes.map((c) => [c.name, ...pair(s?.armAverages[c.id], before?.armAverages[c.id]).map((v) => (v === null ? '' : `${v}%`))]) }}
+          table={{ head: ['Arm', ...series.map((x) => x.name)], rows: peopled.map((c) => [c.name, ...pair(s?.armAverages[c.id], before?.armAverages[c.id]).map((v) => (v === null ? '' : `${v}%`))]) }}
         >
-          <BarRows max={100} series={series} rows={classes.map((c) => ({ label: c.name, to: `/s/${schoolId}/classes/${c.id}?tab=cards`, values: pair(s?.armAverages[c.id], before?.armAverages[c.id]) }))} />
+          <BarRows max={100} series={series} rows={peopled.map((c) => ({ label: c.name, to: `/s/${schoolId}/classes/${c.id}?tab=cards`, values: pair(s?.armAverages[c.id], before?.armAverages[c.id]) }))} />
         </ChartCard>
 
         <ChartCard

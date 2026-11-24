@@ -11,6 +11,7 @@ import { rosterOf } from '../lib/reportCards';
 import { naira } from '../lib/fees';
 import { friendlyError } from '../lib/errors';
 import { SourceStamp } from '../components/SourceStamp';
+import { Prose } from '../components/Prose';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import { useArm } from '../school/useArm';
@@ -140,7 +141,7 @@ export function AskPage() {
             <div className="ask-a">
               <div className="ask-meta">{t.source && <SourceStamp source={t.source} ms={t.ms} />}</div>
               <div className="ask-text">
-                {t.a || <span className="muted">Reading the figures…</span>}
+                {t.a ? <Prose text={t.a} /> : <span className="muted">Reading the figures…</span>}
                 {t.pending && <span className="caret" aria-hidden />}
               </div>
               {t.sent && (
