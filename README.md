@@ -27,6 +27,26 @@ Chalkvault is now a multi-school records system. Each school registers its own p
 
 The research behind these choices is in [RESEARCH.md](RESEARCH.md).
 
+### v2: run the way Nigerian schools run ([PLAN-v2.md](PLAN-v2.md))
+- **Classes, arms and subjects:** JSS 1A, JSS 1B…, each with subject offerings. Electives can have chosen students.
+- **Form teachers and subject teachers:** each subject teacher sees only their subjects and those students. Enforced in `firestore.rules`.
+- **School rules in Settings:**
+  - who takes attendance (form teacher daily, per lesson, or admins)
+  - one or many form classes per teacher
+  - whether teachers manage students
+  - approval, subject remarks, positions
+  - cloud scanning (off by default)
+  - score-sheet columns and grade bands
+- **Score sheets:**
+  - type scores directly
+  - **scan a photo** with Gemini Nano (`ONLY_ON_DEVICE`; cloud only if the admin allows it)
+  - **import a CBT export** (CSV/Excel). AI maps the columns from the header row only (`PREFER_ON_DEVICE`, no names), then students are matched by admission number or name.
+- **Report cards:** every subject, positions, AI-drafted subject remarks and principal's comments (name-free prompts), attendance, next term date. Print a whole arm.
+- **Results portal (`/results`):** admins publish; each student has a private result PIN printed on a slip. Parents view and print without an account.
+- **Dashboards:**
+  - Admin: attendance today, score-entry progress, comments and approvals, staffing gaps, follow-ups, notices.
+  - Teacher: my subjects, my form class, notices.
+
 ## How the hybrid inference works
 
 `src/lib/ai.ts`

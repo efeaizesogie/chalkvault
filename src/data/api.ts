@@ -369,7 +369,8 @@ export function newPin() {
   return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}`;
 }
 export async function publishResult(r: PublishedResult) {
-  await setDoc(paths.result(r.pin), r);
+  // Firestore rejects undefined values anywhere in a document; a JSON round trip drops them.
+  await setDoc(paths.result(r.pin), JSON.parse(JSON.stringify(r)) as PublishedResult);
 }
 export async function readResult(pin: string) {
   const snap = await getDoc(paths.result(pin.trim().toUpperCase()));

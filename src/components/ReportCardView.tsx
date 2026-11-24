@@ -122,7 +122,7 @@ export function ReportCardView(props: {
           {c.gradeKey.map((b, i) => (
             <span key={b.grade}>
               {i > 0 && ', '}
-              {b.grade} {b.min}% and above
+              {b.grade} {b.min > 0 ? `${b.min}% and above` : `below ${c.gradeKey[i - 1]?.min ?? 0}%`}
             </span>
           ))}
         </p>

@@ -477,7 +477,7 @@ export async function writeRemark(r: { kind: 'subject' | 'principal'; subject?: 
     r.kind === 'subject'
       ? `Write one short subject teacher's remark (at most 14 words) for a school report card in ${r.subject}.`
       : "Write one short principal's remark (at most 20 words) for a school report card.",
-    'Be specific, warm and honest. No names, no greeting. Do not invent facts.',
+    'Write in the third person about "the student" without naming them. Be specific, warm and honest. Do not repeat the score, grade or position (they are printed beside the remark); say what they mean for the student and one thing to do next. No greeting, no exclamation marks. Do not invent facts.',
     `Facts: ${r.facts}`,
     note ? `Teacher's note (shorthand): ${note}` : '',
     'Return only the remark.',

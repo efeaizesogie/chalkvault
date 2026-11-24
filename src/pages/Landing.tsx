@@ -2,18 +2,20 @@ import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 
 const FEATURES: { title: string; body: string; soon?: boolean }[] = [
-  { title: 'Your school, your private space', body: 'Register once and set up terms, class levels and subjects. Every school is a separate, locked space.' },
-  { title: 'Staff and roles', body: 'Invite teachers with a private link. Teachers only see the classes you assign them; owners and admins see everything.' },
-  { title: 'Classes and student records', body: 'Profiles, admission numbers, guardians and the language each family reads in, all in one record per child.' },
-  { title: 'Attendance in one tap', body: 'Mark a class present, late or absent in seconds. Or photograph the paper register and Gemini Nano reads it on the laptop.' },
-  { title: 'Scores, grades and positions', body: 'Enter CA and exam scores. Totals, WAEC or letter grades, positions and a printable broadsheet are worked out for you.' },
+  { title: 'Classes, arms and subjects', body: 'JSS 1A, JSS 1B, SS 2 Gold: set up every class and arm with its subjects in one step. Electives can have their own students.' },
+  { title: 'Your school, your rules', body: 'Decide who takes attendance, how many form classes a teacher can hold, whether comments need approval, and what goes on the score sheet.' },
+  { title: 'Form teachers and subject teachers', body: 'A subject teacher sees only their subjects and those students. A form teacher sees their arm. Admins see everything.' },
+  { title: 'Attendance in one tap', body: 'Daily or lesson by lesson, as your school chooses. Or photograph the paper register and Gemini Nano reads it on the laptop.' },
+  { title: 'Score sheets that fill themselves', body: 'Type scores, scan a photographed score sheet, or import results from your CBT system. The AI matches the columns for you.' },
+  { title: 'Report cards and broadsheets', body: 'Every subject, total, grade, position and remark, with form teacher and principal comments, ready to print for the whole class.' },
+  { title: 'Results for parents by PIN', body: 'Publish report cards and print a private result PIN for each student. Parents check results online without an account.' },
   { title: 'Report comments, written on the laptop', body: 'Gemini Nano turns rough notes, scores and attendance into a warm, specific comment, writing it as you watch.' },
   { title: 'A whole class in one click', body: 'Write every comment in a class at once. On-device writing costs nothing per comment and works with the Wi-Fi off.' },
-  { title: 'Head teacher approval', body: 'Teachers send comments for approval. Once approved, a comment is locked, and a school-set length limit keeps reports tidy.' },
+  { title: 'Head teacher approval', body: 'Form teachers send comments for approval. Once approved, a comment is locked. The principal’s comments can be drafted too.' },
   { title: 'Parents in their own language', body: 'French and Spanish are translated on the laptop. Yoruba, Hausa, Igbo and more go to the cloud with names removed. Share on WhatsApp.' },
   { title: 'Students who need follow-up', body: 'As each comment is written, the AI flags academic, attendance or wellbeing concerns for the head teacher.' },
   { title: 'An audit ledger', body: 'Every AI request is logged: where it ran, and exactly what, if anything, left the device.' },
-  { title: 'Student files', body: 'Upload past reports, certificates and forms to a student’s record.', soon: true },
+  { title: 'Fees, timetable and Google Drive', body: 'Fee tracking, timetables and importing CBT results straight from Google Drive.', soon: true },
 ];
 
 const FAQ: { q: string; a: string }[] = [
@@ -36,6 +38,14 @@ const FAQ: { q: string; a: string }[] = [
   {
     q: 'Can we delete everything?',
     a: 'Yes. The school owner can delete the school from Settings, which removes every class, student record, note, comment and staff membership.',
+  },
+  {
+    q: 'How do parents see results?',
+    a: 'When the school publishes a term’s report cards, each student has a private result PIN, printed on a slip. A parent enters it on the Chalkvault results page to view and print the report card. No account or app is needed.',
+  },
+  {
+    q: 'Can we import scores from our CBT system?',
+    a: 'Yes. Upload the CSV or Excel export. Chalkvault reads only the header row with AI to match columns to your score sheet, then matches students by admission number or name for you to check before saving.',
   },
   { q: 'What does it cost?', a: 'Chalkvault is free during the pilot, and the code is open source under the Apache 2.0 licence.' },
 ];
