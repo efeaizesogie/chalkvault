@@ -265,6 +265,8 @@ function FeeItems({ items, canEdit, onRegenerate }: { items: FeeItem[]; canEdit:
       setName('');
       setAmount('');
       setLevels([]);
+      setOptional(false);
+      setDiscountable(true);
     } catch (e) {
       toast(friendlyError(e), 'error');
     }
@@ -290,8 +292,21 @@ function FeeItems({ items, canEdit, onRegenerate }: { items: FeeItem[]; canEdit:
                   <td className="num">{naira(i.amount)}</td>
                   <td>{i.levels.length ? i.levels.join(', ') : 'Every class'}</td>
                   <td>
-                    {i.optional ? 'Optional' : 'Compulsory'}
-                    {i.discountable ? ', discounts apply' : ''}
+                    {canEdit ? (
+                      <span className="item-flags">
+                        <label>
+                          <input type="checkbox" checked={i.optional} onChange={(e) => patchIn(schoolId, 'feeItems', i.id, { optional: e.target.checked })} /> Optional
+                        </label>
+                        <label>
+                          <input type="checkbox" checked={i.discountable} onChange={(e) => patchIn(schoolId, 'feeItems', i.id, { discountable: e.target.checked })} /> Discounts apply
+                        </label>
+                      </span>
+                    ) : (
+                      <>
+                        {i.optional ? 'Optional' : 'Compulsory'}
+                        {i.discountable ? ', discounts apply' : ''}
+                      </>
+                    )}
                   </td>
                   <td>
                     {canEdit && (

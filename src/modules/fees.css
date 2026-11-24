@@ -17,3 +17,5 @@
 @media print {
   .fee-tabs, .no-print, .fee-split > .panel:first-child { display: none !important; }
 }
+.item-flags { display: flex; gap: 12px; flex-wrap: wrap; }
+.item-flags label { display: inline-flex; gap: 4px; align-items: center; }

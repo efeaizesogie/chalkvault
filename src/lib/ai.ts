@@ -625,19 +625,24 @@ export async function askSchool(opts: {
     inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { temperature: 0.2 } },
   });
 
-  // Codes for names, longest first so "Ada Obi" is replaced before "Ada".
-  const codes = new Map<string, string>();
-  [...new Set(opts.names)].sort((a, b) => b.length - a.length).forEach((n, i) => codes.set(n, `[S${i + 1}]`));
+  // Codes for names. Full names first, then each first name and surname on its own (notes often say just "Ada"),
+  // so no part of a child's name can reach the cloud. Codes are turned back into full names locally.
+  const full = [...new Set(opts.names)].sort((a, b) => b.length - a.length);
+  const codeOf = new Map(full.map((n, i) => [n, `[S${i + 1}]`]));
+  const parts = new Map<string, string>();
+  for (const n of full) for (const p of n.split(/\s+/)) if (p.length >= 3 && !parts.has(p.toLowerCase())) parts.set(p.toLowerCase(), codeOf.get(n)!);
+  const esc = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
   const hide = (t: string) => {
     if (local) return t;
     let out = t;
-    for (const [n, c] of codes) out = out.split(n).join(c);
+    for (const [n, c] of codeOf) out = out.split(n).join(c);
+    for (const [p, c] of [...parts].sort((a, b) => b[0].length - a[0].length)) out = out.replace(new RegExp(`(?<![\\p{L}])${esc(p)}(?![\\p{L}])`, 'giu'), c);
     return out;
   };
   const show = (t: string) => {
     if (local) return t;
     let out = t;
-    for (const [n, c] of codes) out = out.split(c).join(n);
+    for (const [n, c] of codeOf) out = out.split(c).join(n);
     return out;
   };
 
