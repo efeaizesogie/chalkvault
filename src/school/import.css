@@ -1,0 +1,25 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: one drop area, a plain list of pages with what was found, then a review table; nothing saves until the admin says so */
+.drop { position: relative; display: grid; gap: 4px; place-items: center; text-align: center; padding: 36px 20px; border: 1.5px dashed var(--ink); border-radius: 20px; background: var(--sheet); cursor: pointer; }
+.drop input { position: absolute; width: 1px; height: 1px; opacity: 0; }
+.drop:focus-within { outline: 2px solid var(--ink); outline-offset: 3px; }
+.drop.busy { cursor: progress; background: var(--paper-2); }
+.page-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.page-item { display: grid; grid-template-columns: 56px 1fr auto; gap: 12px; align-items: center; padding: 8px; border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); }
+.page-item img, .page-ph { width: 56px; height: 56px; object-fit: cover; border-radius: 8px; background: var(--paper-2); display: grid; place-items: center; }
+.page-body { display: grid; gap: 2px; min-width: 0; }
+.page-body b { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-weight: 600; }
+.page-item.reading { border-color: var(--ink); }
+.page-item .err { color: var(--danger); }
+.arm-plan { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.arm-plan li { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.arm-plan li > span:first-of-type { min-width: 120px; font-weight: 600; }
+.arm-letter { width: 56px; }
+.import-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.import-table th, .import-table td { text-align: left; padding: 6px; border-bottom: 1px solid var(--rule); vertical-align: middle; }
+.import-table th { font-weight: 600; }
+.import-table input:not([type='checkbox']) { width: 100%; min-width: 110px; }
+.import-table tr.off { color: var(--muted); }
+.import-table .unsure, .import-table input.unsure { background: var(--peach); border-radius: 4px; }
+.apply-bar { position: sticky; bottom: 12px; display: flex; gap: 16px; align-items: center; justify-content: space-between; flex-wrap: wrap; box-shadow: var(--lift); }
+.apply-bar p { margin: 0; max-width: 70ch; }

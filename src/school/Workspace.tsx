@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { ErrorBoundary } from '../components/ErrorBoundary';
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { query, where } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
@@ -259,7 +260,9 @@ function Frame() {
           )}
         </nav>
         <main className="ws-main">
-          <Outlet context={ctx} />
+          <ErrorBoundary resetKey={location.pathname}>
+            <Outlet context={ctx} />
+          </ErrorBoundary>
         </main>
       </div>
 

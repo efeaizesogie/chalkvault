@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
-import { addNotice, blankStudent, createSchool, getUserSchools, newPin, paths, updateSchool } from '../data/api';
+import { addNotice, blankStudent, createSchool, deleteSchool, getUserSchools, newPin, paths, updateSchool } from '../data/api';
 import { seedDemoHistory } from './demoHistory';
 import { getDb } from '../lib/firebase';
 import { DEMO_ARMS, DEMO_LEVELS, DEMO_STUDENTS, DEMO_SUBJECTS } from '../sample';
@@ -26,6 +26,11 @@ export function Demo() {
         const mine = await getUserSchools(u.uid);
         for (const id of Object.keys(mine.schools)) {
           const s = (await getDoc(paths.school(id)).catch(() => null))?.data() as School | undefined;
+          // Demo schools last a week; after that this browser gets a fresh one.
+          if (s?.demo && Date.now() - (s.createdAt ?? 0) > 7 * 864e5) {
+            await deleteSchool(id, u.uid).catch(() => undefined);
+            continue;
+          }
           if (s?.arms && (s.demoVersion ?? 0) >= 3) return nav(`/s/${id}`, { replace: true });
         }
 

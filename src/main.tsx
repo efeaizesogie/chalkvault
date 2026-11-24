@@ -1,4 +1,5 @@
 import { StrictMode } from 'react';
+import { ErrorBoundary } from './components/ErrorBoundary';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthProvider';
@@ -45,6 +46,7 @@ createRoot(document.getElementById('root')!).render(
     <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <ToastProvider>
         <AuthProvider>
+          <ErrorBoundary>
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route path="/login" element={<Login />} />
@@ -80,6 +82,7 @@ createRoot(document.getElementById('root')!).render(
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
+          </ErrorBoundary>
         </AuthProvider>
       </ToastProvider>
     </BrowserRouter>
