@@ -10,7 +10,7 @@ export async function pdfToImages(file: File, onPage?: (done: number, total: num
   const worker = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default;
   pdfjs.GlobalWorkerOptions.workerSrc = worker;
   const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
-  const doc = await task.promise;
+  const doc = await Promise.race([task.promise, new Promise<never>((_, reject) => setTimeout(() => reject(new Error('This PDF took too long to open. Try again, or save its pages as photos.')), 30000))]);
   const count = doc.numPages;
   const total = Math.min(count, MAX_PDF_PAGES);
   const out: { base64: string; mimeType: 'image/jpeg'; thumb: string }[] = [];
