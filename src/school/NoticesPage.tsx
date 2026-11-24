@@ -6,6 +6,7 @@ import type { Notice } from '../data/types';
 import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
+import { PrintExport } from '../components/PrintExport';
 
 export function useNotices() {
   const { schoolId } = useSchool();
@@ -37,6 +38,7 @@ export function NoticesPage() {
           <h1 className="display-sm">Notices</h1>
           <p className="lede">Announcements for every member of staff.</p>
         </div>
+        <PrintExport title="Notices" />
       </header>
       {isAdmin && (
         <section className="panel">

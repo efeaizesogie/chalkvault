@@ -6,6 +6,7 @@ import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
+import { printParts } from '../lib/print';
 
 const naira = (n: number) => '₦' + (n || 0).toLocaleString('en-NG');
 
@@ -82,7 +83,7 @@ export function TransportPage() {
         </div>
         {isAdmin && routes.data.length > 0 && (
           <div className="head-actions">
-            <button className="pill ghost" onClick={() => window.print()}>
+            <button className="pill ghost" onClick={() => printParts([document.querySelector<HTMLElement>('.ws-main .page')], { title: 'Transport routes' })}>
               Print rider lists
             </button>
           </div>

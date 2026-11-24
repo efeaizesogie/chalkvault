@@ -16,6 +16,7 @@ import { useArm } from './useArm';
 import { AttendanceView } from './AttendanceView';
 import { PublishButton } from './Results';
 import type { WorkspaceCtx } from './Workspace';
+import { downloadCsv, printParts, type Cell } from '../lib/print';
 
 type Tab = 'register' | 'comments' | 'subjects' | 'reports' | 'students';
 
@@ -325,7 +326,7 @@ function AddNames({ onAdd }: { onAdd: (names: string[]) => void }) {
 
 /** Report cards for the arm: summary table, the principal's comment, print, publish. */
 function ReportCards({ classId, cards, students, records, ws }: { classId: string; cards: Map<string, ReportCard>; students: StudentProfile[]; records: TermRecord[]; ws: WorkspaceCtx }) {
-  const { schoolId, school, isAdmin, term, me, policy } = useSchool();
+  const { schoolId, school, isAdmin, term, me, policy, classes } = useSchool();
   const toast = useToast();
   const [open, setOpen] = useState<string | null>(null);
   const [printAll, setPrintAll] = useState(false);
@@ -358,6 +359,51 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
   };
 
   const unapproved = policy.approvalRequired ? students.filter((s) => recOf(s.id)?.status !== 'approved').length : 0;
+  const className = classes.find((c) => c.id === classId)?.name ?? '';
+
+  /** Every student's total in every subject, with average, grade and position: the class broadsheet. */
+  const broadsheetRows = (): Cell[][] => {
+    const subjects = [...new Set(ranked.flatMap((s) => cards.get(s.id)?.subjects.map((x) => x.subject) ?? []))].sort();
+    return [
+      [...(policy.showPositions ? ['Position'] : []), 'Student', 'Admission no.', ...subjects, 'Average', 'Form comment', 'Principal’s comment'],
+      ...ranked.map((s) => {
+        const c = cards.get(s.id);
+        const r = recOf(s.id);
+        return [
+          ...(policy.showPositions ? [c?.position ?? ''] : []),
+          s.name,
+          s.admissionNo,
+          ...subjects.map((sub) => {
+            const x = c?.subjects.find((y) => y.subject === sub);
+            return x?.grade ? `${x.total} (${x.grade})` : '';
+          }),
+          c?.average ? `${c.average}%` : '',
+          r?.final ?? r?.draft?.comment ?? '',
+          r?.principalComment ?? '',
+        ];
+      }),
+    ];
+  };
+  /** The broadsheet as a table, for printing. */
+  const broadsheetTable = () => {
+    const rows = broadsheetRows().map((r) => r.slice(0, -2));
+    const wrap = document.createElement('div');
+    const title = document.createElement('h2');
+    title.className = 'h3';
+    title.textContent = `${className} broadsheet, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`;
+    const t = document.createElement('table');
+    t.className = 'broadsheet-print';
+    rows.forEach((r, i) => {
+      const tr = t.insertRow();
+      for (const v of r) {
+        const cell = document.createElement(i === 0 ? 'th' : 'td');
+        cell.textContent = v === null || v === undefined ? '' : String(v);
+        tr.appendChild(cell);
+      }
+    });
+    wrap.append(title, t);
+    return wrap;
+  };
 
   return (
     <section className="page">
@@ -376,13 +422,20 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
             className="pill ghost"
             onClick={() => {
               setPrintAll(true);
+              // Each card carries the school's own heading, so no letterhead; one card per page.
               setTimeout(() => {
-                window.print();
+                printParts([document.querySelector<HTMLElement>('.print-cards')], { title: `Report cards, ${className}, ${term?.name ?? ''}`, letterhead: false });
                 setPrintAll(false);
               }, 100);
             }}
           >
             Print all report cards
+          </button>
+          <button className="pill ghost" onClick={() => printParts([broadsheetTable()], { title: `Broadsheet, ${className}, ${term?.name ?? ''}`, landscape: true })}>
+            Print broadsheet
+          </button>
+          <button className="pill ghost" onClick={() => downloadCsv(`Broadsheet ${className} ${term?.name ?? ''}`, broadsheetRows())}>
+            Export broadsheet
           </button>
           {isAdmin && <PublishButton classId={classId} students={students} cards={cards} blocked={unapproved > 0} />}
         </div>
@@ -437,6 +490,7 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
           schoolName={school.name}
           schoolAddress={school.address}
           motto={school.motto}
+          logo={school.logo}
           principalName={school.principalName}
           studentName={students.find((s) => s.id === open)!.name}
           admissionNo={students.find((s) => s.id === open)!.admissionNo}
@@ -451,6 +505,7 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
               schoolName={school.name}
               schoolAddress={school.address}
               motto={school.motto}
+              logo={school.logo}
               principalName={school.principalName}
               studentName={s.name}
               admissionNo={s.admissionNo}

@@ -17,6 +17,7 @@ import { useSchool } from '../school/SchoolContext';
 import { useArm } from '../school/useArm';
 import type { WorkspaceCtx } from '../school/Workspace';
 import './ask.css';
+import { PrintExport } from '../components/PrintExport';
 
 type Part = { text: string; names: string[] };
 type Turn = { q: string; a: string; source?: 'on_device' | 'in_cloud'; ms?: number; sent?: string; pending?: boolean };
@@ -116,6 +117,7 @@ export function AskPage() {
             {ws.device === 'available' ? 'Gemini Nano answers here too, so nothing leaves the device.' : 'Without Gemini Nano, answers come from the cloud with every student name replaced by a code.'}
           </p>
         </div>
+        <PrintExport title="Ask Chalkvault" />
       </header>
 
       {arms.map((c) => (

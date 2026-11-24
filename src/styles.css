@@ -330,7 +330,8 @@ textarea.comment:focus { outline: none; border-color: var(--ink); }
 /* ---------- Print (Export → PDF) ---------- */
 @media print {
   body { background: var(--sheet); }
-  .app > *:not(.board), .rail, .desk, .sheet > *:not(.print-only) { display: none !important; }
+  /* Only the single-teacher board (v1) uses this; the school workspace prints through print.css. */
+  .app:not(.ws) > *:not(.board), .app:not(.ws) .rail, .app:not(.ws) .desk, .app:not(.ws) .sheet > *:not(.print-only) { display: none !important; }
   .board { display: block; border: 0; }
   .sheet { border: 0; background: var(--sheet); }
   .print-only { display: block; font-family: var(--serif); }

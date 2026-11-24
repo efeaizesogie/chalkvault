@@ -11,6 +11,7 @@ import { ReportCardView } from '../components/ReportCardView';
 import { IncidentLog } from '../modules/IncidentLog';
 import { whatsappLink } from '../lib/share';
 import { useSchool } from './SchoolContext';
+import { printParts } from '../lib/print';
 
 const blankGuardian: Guardian = { name: '', relationship: '', phone: '', email: '', language: 'English' };
 
@@ -65,8 +66,8 @@ export function StudentRecord() {
           </p>
         </div>
         <div className="head-actions">
-          <button className="pill ghost" onClick={() => window.print()}>
-            Print report
+          <button className="pill ghost" onClick={() => printParts([document.querySelector<HTMLElement>('.ws-main .page')], { title: `Student record, ${p.name}` })}>
+            Print record
           </button>
           <button className="ticket" onClick={save} disabled={!dirty || !canEdit} title={canEdit ? undefined : 'Only admins or the form teacher can edit this record'}>
             {!canEdit ? 'View only' : dirty ? 'Save changes' : 'Saved'}

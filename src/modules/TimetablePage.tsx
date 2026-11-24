@@ -6,6 +6,7 @@ import { friendlyError } from '../lib/errors';
 import { defaultPerWeek, defaultSettings, generateTimetable, validateTimetable } from '../lib/timetable';
 import { useSchool } from '../school/SchoolContext';
 import { useToast } from '../ui/toast';
+import { downloadCsv, printParts, tableRows } from '../lib/print';
 import './TimetablePage.css';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -73,15 +74,10 @@ export function TimetablePage() {
     }
   };
 
-  const print = () => {
-    document.body.classList.add('tt-printing');
-    const done = () => {
-      document.body.classList.remove('tt-printing');
-      window.removeEventListener('afterprint', done);
-    };
-    window.addEventListener('afterprint', done);
-    window.print();
-  };
+  const viewName = () => (mode === 'class' ? classes.find((c) => c.id === armId)?.name ?? 'Timetable' : nameOf(teacherId));
+  /** The timetable on screen, on a landscape page under the school's letterhead. */
+  const print = () => printParts([document.querySelector<HTMLElement>('.tt-print-area')], { title: `Timetable, ${viewName()}`, landscape: true });
+  const exportView = () => downloadCsv(`Timetable ${viewName()}`, tableRows(document.querySelector<HTMLTableElement>('.tt-print-area table')));
 
   const offeringById = useMemo(() => new Map(offerings.map((o) => [o.id, o])), [offerings]);
   const nameOf = (uid: string) => members.find((m) => m.uid === uid)?.name ?? 'Unassigned';
@@ -109,6 +105,9 @@ export function TimetablePage() {
           <div className="head-actions">
             <button className="pill ghost" onClick={print}>
               Print
+            </button>
+            <button className="pill ghost" onClick={exportView}>
+              Export CSV
             </button>
             {isAdmin && (
               <button className="ticket" onClick={generate} disabled={busy}>
@@ -184,7 +183,7 @@ export function TimetablePage() {
 
           <div className="tt-print-area">
             <p className="tt-print-title">
-              {school.name}: {mode === 'class' ? classes.find((c) => c.id === armId)?.name ?? 'Timetable' : nameOf(teacherId)}
+              {mode === 'class' ? classes.find((c) => c.id === armId)?.name ?? 'Timetable' : nameOf(teacherId)}
             </p>
             {mode === 'class' ? (
               <ClassGrid settings={timetable.settings} slots={timetable.slots[armId] ?? []} offeringById={offeringById} teacherLabel={teacherLabel} />

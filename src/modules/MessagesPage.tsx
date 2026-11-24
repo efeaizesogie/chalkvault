@@ -14,6 +14,7 @@ import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import type { WorkspaceCtx } from '../school/Workspace';
 import './messages.css';
+import { PrintExport } from '../components/PrintExport';
 
 type Kind = ParentMessage['kind'];
 type Recipient = { student: StudentProfile; guardian: string; phone: string; language: string; amount?: number };
@@ -131,6 +132,7 @@ export function MessagesPage() {
           <h1 className="display-sm">Messages to parents</h1>
           <p className="lede">The AI writes one message without any names, translates it into each family’s language, and the names and amounts are filled in on this computer.</p>
         </div>
+        <PrintExport title="Messages to parents" />
       </header>
 
       <section className="panel">

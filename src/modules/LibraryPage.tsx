@@ -7,6 +7,7 @@ import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
+import { PrintExport } from '../components/PrintExport';
 
 const addDays = (iso: string, days: number) => {
   const d = new Date(iso + 'T00:00:00');
@@ -129,6 +130,7 @@ export function LibraryPage() {
           <span className="mono">Find a book</span>
           <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Title or author" />
         </label>
+        <PrintExport title="Library" fromTable />
       </header>
 
       <section className="panel wide">

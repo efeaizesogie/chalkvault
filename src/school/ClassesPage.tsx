@@ -3,6 +3,7 @@ import { useQuery } from '../data/hooks';
 import { paths } from '../data/api';
 import { CLASS_COLOURS, type StudentProfile } from '../data/types';
 import { useSchool } from './SchoolContext';
+import { PrintExport } from '../components/PrintExport';
 
 /** Admin view of every class level and its arms. */
 export function ClassesPage() {
@@ -23,6 +24,7 @@ export function ClassesPage() {
         <Link className="pill ghost" to={`/s/${schoolId}/settings`}>
           Add arms or subjects
         </Link>
+        <PrintExport title="Classes" />
       </header>
       {levels.map((level) => {
         const arms = classes.filter((c) => c.level === level);

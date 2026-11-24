@@ -10,21 +10,22 @@ import { PrincipalDashboard } from './PrincipalDashboard';
 
 export function Overview() {
   const { isAdmin } = useSchool();
-  return isAdmin ? <PrincipalDashboard greeting={(line) => <Greeting line={line} />} /> : <TeacherDashboard />;
+  return isAdmin ? <PrincipalDashboard greeting={(line, actions) => <Greeting line={line} actions={actions} />} /> : <TeacherDashboard />;
 }
 
-function Greeting({ line }: { line: string }) {
+function Greeting({ line, actions }: { line: string; actions?: React.ReactNode }) {
   const { me, term } = useSchool();
   const first = (me.name || '').split(' ')[0];
   return (
     <header className="page-head">
       <div>
-        <h1 className="display-sm">Good to see you{first ? `, ${first}` : ''}.</h1>
+        <h1 className="display-sm no-print">Good to see you{first ? `, ${first}` : ''}.</h1>
         <p className="lede">
           {term ? `${term.name}${term.session ? `, ${term.session}` : ''}. ` : ''}
           {line}
         </p>
       </div>
+      {actions}
     </header>
   );
 }

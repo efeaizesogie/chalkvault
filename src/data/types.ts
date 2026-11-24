@@ -70,6 +70,10 @@ export interface School {
   address?: string;
   motto?: string;
   principalName?: string;
+  /** Letterhead contact lines and crest (a small image kept on the school record). */
+  phone?: string;
+  email?: string;
+  logo?: string;
   /** Score components, e.g. CA 1 (20), CA 2 (20), Exam (60). */
   assessments?: { key: string; label: string; max: number }[];
   /** Grade bands by percentage, highest first. */
@@ -327,6 +331,8 @@ export interface PublishedResult {
   schoolId: string;
   schoolName: string;
   schoolAddress?: string;
+  schoolLogo?: string;
+  schoolMotto?: string;
   studentName: string;
   admissionNo: string;
   reports: Record<string, ReportCard>;

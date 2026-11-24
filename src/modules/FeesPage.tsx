@@ -10,6 +10,8 @@ import { SourceStamp } from '../components/SourceStamp';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import type { WorkspaceCtx } from '../school/Workspace';
+import { PrintExport } from '../components/PrintExport';
+import { downloadCsv, printParts } from '../lib/print';
 import './fees.css';
 
 type Tab = 'overview' | 'invoices' | 'payments' | 'items';
@@ -91,6 +93,33 @@ export function FeesPage() {
             {term?.session ? `, ${term.session}` : ''}. Part payments, discounts and arrears are tracked per child.
           </p>
         </div>
+        <PrintExport
+          title={`Fees, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`}
+          exportLabel="Export invoices"
+          rows={() => [
+            ['Student', 'Arm', 'Fees', 'Discounts', 'Arrears', 'Total', 'Paid', 'Balance'],
+            ...[...termInvoices]
+              .sort((a, b) => armOf(a.classId).localeCompare(armOf(b.classId), undefined, { numeric: true }) || nameOf(a.studentId).localeCompare(nameOf(b.studentId)))
+              .map((i) => [nameOf(i.studentId), armOf(i.classId), i.lines.reduce((n, l) => n + l.amount, 0), i.discounts.reduce((n, l) => n + l.amount, 0), i.arrears, i.total, i.paid, i.balance]),
+            [],
+            ['Total', '', '', '', '', termInvoices.reduce((n, i) => n + i.total, 0), termInvoices.reduce((n, i) => n + i.paid, 0), termInvoices.reduce((n, i) => n + i.balance, 0)],
+          ]}
+        />
+        <button
+          type="button"
+          className="pill ghost no-print"
+          onClick={() =>
+            downloadCsv(`Payments, ${term?.name ?? ''}`, [
+              ['Date', 'Receipt no.', 'Student', 'Arm', 'Amount', 'Method', 'Reference', 'Paid by'],
+              ...payments.data
+                .filter((p) => p.termId === termId)
+                .sort((a, b) => a.date.localeCompare(b.date))
+                .map((p) => [p.date, p.receiptNo, nameOf(p.studentId), armOf(p.classId), p.amount, p.method, p.reference, p.payer]),
+            ])
+          }
+        >
+          Export payments
+        </button>
       </header>
       <nav className="class-tabs fee-tabs" aria-label="Fee views">
         {TABS.map((t) => (
@@ -469,7 +498,7 @@ function InvoiceList(props: {
                 {term?.session ? `, ${term.session}` : ''}
               </p>
             </div>
-            <button className="pill ghost" onClick={() => window.print()}>
+            <button className="pill ghost" onClick={(e) => printParts([e.currentTarget.closest<HTMLElement>('.invoice-sheet')], { title: `Invoice, ${st.name}` })}>
               Print invoice
             </button>
           </div>
@@ -760,7 +789,7 @@ function Payments(props: {
               <p className="muted small">Official receipt {last.receiptNo}</p>
             </div>
             <div className="head-actions no-print">
-              <button className="pill ghost" onClick={() => window.print()}>
+              <button className="pill ghost" onClick={(e) => printParts([e.currentTarget.closest<HTMLElement>('.receipt')], { title: `Receipt ${last.receiptNo}` })}>
                 Print receipt
               </button>
               <button className="link" onClick={() => setLast(null)}>

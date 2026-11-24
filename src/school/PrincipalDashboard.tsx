@@ -11,6 +11,8 @@ import { rosterOf } from '../lib/reportCards';
 import { summaryText, weekOf, type StudentRisk } from '../lib/termStats';
 import { BarRows, ChartCard, Columns, Figure, LineChart, type Series } from '../components/Charts';
 import { SourceStamp } from '../components/SourceStamp';
+import { PrintExport } from '../components/PrintExport';
+import type { Cell } from '../lib/print';
 import { Prose } from '../components/Prose';
 import { useSchool } from './SchoolContext';
 import { useSavedSummary, useTermStats } from './useTermStats';
@@ -22,7 +24,7 @@ const BRIEF_Q =
   'Write this morning’s brief for the head of school: 3 to 5 short points. Say what changed since last term, what needs attention today (attendance gaps, missing scores, unpaid fees, students at risk) and one thing worth praising. Use the figures exactly.';
 
 /** The principal's and owner's dashboard: this term against the last, with an AI brief written from the same figures. */
-export function PrincipalDashboard({ greeting }: { greeting: (line: string) => JSX.Element }) {
+export function PrincipalDashboard({ greeting }: { greeting: (line: string, actions?: JSX.Element) => JSX.Element }) {
   const { schoolId, school, classes, offerings, members, terms, term, policy, viewingPast } = useSchool();
   const ws = useOutletContext<WorkspaceCtx>();
   const students = useQuery<StudentProfile>(paths.students(schoolId), `dash-st:${schoolId}`);
@@ -163,9 +165,45 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
 
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : null);
 
+  /** Everything on the overview as a spreadsheet: headline figures, each arm, each subject, who needs attention. */
+  const exportRows = (): Cell[][] => {
+    const p = (v: number | null | undefined) => (v === null || v === undefined ? '' : `${v}%`);
+    const out: Cell[][] = [
+      [school.name, `Overview, ${term?.name ?? ''} ${term?.session ?? ''}`.trim(), `Exported ${new Date().toLocaleDateString()}`],
+      [],
+      ['Figure', term?.name ?? 'This term', two ? series[1].name : ''],
+      ['Students', s?.students ?? '', two ? before?.students ?? '' : ''],
+      ['Attendance', p(s?.attendancePct), two ? p(before?.attendancePct) : ''],
+      ['Average score', p(s?.average), two ? p(before?.average) : ''],
+      ['Scores entered', s ? `${s.scoresEntered} of ${s.scoresExpected}` : '', ''],
+      ['Fees collected', s?.feesExpected ? `${naira(s.feesCollected)} of ${naira(s.feesExpected)}` : '', two && before?.feesExpected ? `${naira(before.feesCollected)} of ${naira(before.feesExpected)}` : ''],
+      ['Need attention', s?.atRisk ?? '', two ? before?.atRisk ?? '' : ''],
+      [],
+      ['Arm', 'Students', 'Attendance', 'Average', 'Scores entered', 'Form comments', 'Fees collected', 'Children owing'],
+      ...peopled.map((c) => {
+        const f = feeByArm.find((x) => x.c.id === c.id);
+        const comp = completion.find((x) => x.c.id === c.id);
+        return [c.name, byClass(c.id).length, p(s?.attendanceByArm[c.id]), p(s?.armAverages[c.id]), p(comp?.scores), p(comp?.comments), f ? p(pct(f.paid, f.total)) : '', f?.owing ?? ''];
+      }),
+      [],
+      ['Subject', `Average, ${term?.name ?? 'this term'}`, two ? `Average, ${series[1].name}` : ''],
+      ...subjects.map((x) => [x, p(s?.subjectAverages[x]), two ? p(before?.subjectAverages[x]) : '']),
+      [],
+      ['Grade', 'Subject grades given'],
+      ...grades.map((g) => [g, s?.grades[g] ?? 0]),
+      [],
+      ['Needs attention', 'Arm', 'Why'],
+      ...risks.map((r) => [r.name, armName(r.classId), r.reasons.join('; ')]),
+    ];
+    return out;
+  };
+
   return (
     <div className="page dashboard">
-      {greeting(`${school.name}: ${active.length} students in ${classes.length} arms, ${members.length} staff.`)}
+      {greeting(
+        `${school.name}: ${active.length} students in ${classes.length} arms, ${members.length} staff.`,
+        <PrintExport title={`Overview, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`} rows={exportRows} printLabel="Print overview" />,
+      )}
 
       <section className="panel brief" ref={briefRef} aria-live="polite">
         <div className="panel-head">

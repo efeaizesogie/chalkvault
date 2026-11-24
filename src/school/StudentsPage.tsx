@@ -1,15 +1,33 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { query, where } from 'firebase/firestore';
+import { getDocs, query, where } from 'firebase/firestore';
 import { paths } from '../data/api';
 import { useQuery } from '../data/hooks';
 import { CLASS_COLOURS, type ClassRoom, type StudentProfile } from '../data/types';
 import { useSchool } from './SchoolContext';
+import { PrintExport } from '../components/PrintExport';
+import type { Cell } from '../lib/print';
 
 export function StudentsPage() {
   const { classes, isAdmin, me } = useSchool();
   const myClasses = isAdmin ? classes : classes.filter((c) => me.classIds.includes(c.id) || (me.subjectClassIds ?? []).includes(c.id));
   const [q, setQ] = useState('');
+  const { schoolId } = useSchool();
+  /** Every student in the classes this person can see, with guardians, as a spreadsheet. */
+  const exportStudents = async (): Promise<Cell[][]> => {
+    const lists = isAdmin
+      ? [(await getDocs(paths.students(schoolId))).docs.map((d) => d.data() as StudentProfile)]
+      : await Promise.all(myClasses.map(async (c) => (await getDocs(query(paths.students(schoolId), where('classId', '==', c.id)))).docs.map((d) => d.data() as StudentProfile)));
+    const order = new Map(myClasses.map((c, i) => [c.id, i]));
+    const all = lists.flat().filter((s) => order.has(s.classId) && (s.status ?? 'active') === 'active').sort((a, b) => (order.get(a.classId)! - order.get(b.classId)!) || a.name.localeCompare(b.name));
+    return [
+      ['Name', 'Admission no.', 'Class', 'Pronoun', 'Date of birth', 'Parent or guardian', 'Relationship', 'Phone', 'Email', 'Home language'],
+      ...all.map((s) => {
+        const g = s.guardians[0];
+        return [s.name, s.admissionNo, myClasses.find((c) => c.id === s.classId)?.name, s.pronoun, s.dob, g?.name, g?.relationship, g?.phone, g?.email, g?.language];
+      }),
+    ];
+  };
   return (
     <div className="page">
       <header className="page-head">
@@ -21,6 +39,7 @@ export function StudentsPage() {
           <span className="mono">Find a student</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or admission number" />
         </label>
+        <PrintExport title="Student list" rows={exportStudents} />
       </header>
       {myClasses.map((c) => (
         <ClassStudents key={c.id} cls={c} q={q.trim().toLowerCase()} />

@@ -4,6 +4,7 @@ import { useQuery } from '../data/hooks';
 import type { StudentProfile } from '../data/types';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
+import { PrintExport } from '../components/PrintExport';
 
 export function AlumniPage() {
   const { schoolId, isAdmin } = useSchool();
@@ -56,6 +57,7 @@ export function AlumniPage() {
             <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Name" />
           </label>
         )}
+        <PrintExport title="Alumni" />
       </header>
 
       {total === 0 ? (

@@ -1,0 +1,75 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: printouts carry the school's own letterhead and look like documents, not screenshots of the app: no buttons, no sidebars, A4 margins, tables that don't split mid-row */
+
+#print-root { display: none; }
+
+@media print {
+  @page { size: A4; margin: 14mm 12mm 18mm; }
+  html, body { background: var(--sheet) !important; }
+  * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+
+  /* A Print button was used: show only the print area. */
+  body.printing > :not(#print-root) { display: none !important; }
+  body.printing #print-root { display: block; color: var(--ink); font-size: 12px; }
+
+  /* Ctrl+P on any screen: drop the app's chrome and print the main section. */
+  body:not(.printing) .ws .masthead, body:not(.printing) .side, body:not(.printing) .demo-banner, body:not(.printing) .past-banner,
+  body:not(.printing) .settings-nav, body:not(.printing) .ws-main button, body:not(.printing) .no-print { display: none !important; }
+  body:not(.printing) .shell { display: block; border: 0; }
+  body:not(.printing) .page { padding: 0; }
+
+  /* Letterhead */
+  .ph { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 14px; align-items: center; padding: 0 0 12px; margin: 0 0 16px; border-bottom: 2px solid var(--ink); }
+  .ph-logo { width: 56px; height: 56px; object-fit: contain; }
+  .ph-mono { width: 52px; height: 52px; border-radius: 50%; border: 2px solid var(--ink); display: grid; place-items: center; font: 600 20px/1 var(--serif); }
+  .ph-school { display: grid; gap: 2px; }
+  .ph-school b { font: 400 22px/1.15 var(--serif); }
+  .ph-school i { font: italic 400 13px/1.3 var(--serif); color: var(--ink-2); }
+  .ph-school span { font-size: 11px; color: var(--print-ink-2); }
+  .ph-doc { display: grid; gap: 2px; text-align: right; }
+  .ph-doc b { font-weight: 600; font-size: 13px; }
+  .ph-doc span { font-size: 11px; color: var(--print-ink-2); }
+
+  /* Footer on every page */
+  .pf-foot { position: fixed; bottom: -10mm; left: 0; right: 0; display: flex; gap: 6px; align-items: center; justify-content: center; font-size: 10px; color: var(--print-ink-2); }
+
+  /* What gets printed: plain, ink on paper. */
+  #print-root .pf-part { margin: 0 0 14px; }
+  #print-root :is(button, .pill, .ticket, .no-print, .chart-tools, .brief-actions, .head-actions, .row-actions, .class-tabs, .fee-tabs, .ask-box, .drop, .inline-add, .arm-add, .picker-search, .picker-groups, .caret, details > summary) { display: none !important; }
+  #print-root .page { padding: 0; gap: 14px; }
+  #print-root .page-head { padding-bottom: 8px; }
+  #print-root .display-sm { font-size: 26px; }
+  #print-root .lede { font-size: 12px; }
+  #print-root .panel { border: 1px solid var(--print-rule); border-radius: 8px; padding: 12px; box-shadow: none; break-inside: avoid; background: var(--sheet); color: var(--ink); }
+  #print-root .queue { background: var(--sheet); color: var(--ink); }
+  #print-root .table-wrap { overflow: visible; }
+  #print-root table { width: 100%; border-collapse: collapse; font-size: 11px; }
+  #print-root th, #print-root td { border-bottom: 1px solid var(--print-rule); padding: 4px 6px; text-align: left; }
+  #print-root thead { display: table-header-group; }
+  #print-root tr { break-inside: avoid; }
+  #print-root a { color: var(--ink); text-decoration: none; }
+  #print-root .pf-value { display: inline-block; min-height: 1em; padding: 2px 0; border-bottom: 1px dotted var(--print-rule); min-width: 4ch; }
+  #print-root .stat-grid { grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: none; }
+  #print-root .stat b { font-size: 22px; }
+  #print-root .dash-grid, #print-root .record-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  #print-root .dash-grid > .wide, #print-root .record-grid > .wide { grid-column: 1 / -1; }
+  #print-root .line-chart svg { width: 100%; height: auto; max-height: 240px; }
+  #print-root .brief:not(:has(.brief-text)), #print-root .greeting-only { display: none !important; }
+  #print-root .settings-layout { display: block; }
+  #print-root .settings-nav { display: none; }
+  #print-root .class-card { break-inside: avoid; }
+
+  /* Report cards: one per page, no app letterhead (each card has the school's own heading). */
+  #print-root .report-card-sheet { border: 0; padding: 0; max-width: none; break-after: page; }
+  #print-root .print-cards { display: block; }
+  #print-root .slips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+  #print-root .slip-card { break-inside: avoid; }
+}
+/* Wide documents (timetables, broadsheets) print on landscape pages. */
+@media print {
+  @page wide { size: A4 landscape; margin: 12mm 10mm 16mm; }
+  #print-root.landscape { page: wide; }
+}
+
+@media print { #print-root .print-only { display: block; } }
+@media print { #print-root .print-only.report-card { display: none !important; } }

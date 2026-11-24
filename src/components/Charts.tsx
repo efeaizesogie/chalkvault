@@ -156,6 +156,7 @@ export function LineChart({ points, series, unit = '%', floor = 0, height = 200 
       <svg
         width={w}
         height={h}
+        viewBox={`0 0 ${w} ${h}`}
         role="img"
         aria-label={`${series[0].name}: ${points.map((p) => `${p.label} ${fmt(p.values[0], unit)}`).join(', ')}`}
         onMouseMove={(e) => {
@@ -219,7 +220,7 @@ export function Columns({ cats, series, unit = '' }: { cats: { label: string; va
   };
   return (
     <div className="line-chart" ref={ref} onMouseLeave={() => setTip(null)}>
-      <svg width={w} height={h} role="img" aria-label={cats.map((c) => `${c.label} ${fmt(c.values[0], unit)}`).join(', ')}>
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`} role="img" aria-label={cats.map((c) => `${c.label} ${fmt(c.values[0], unit)}`).join(', ')}>
         <line className="baseline" x1={pad.l} x2={w - pad.r} y1={pad.t + ih} y2={pad.t + ih} />
         {cats.map((c, ci) => {
           const gx = pad.l + ci * slot + (slot - (bw * series.length + 2 * (series.length - 1))) / 2;

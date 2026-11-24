@@ -5,6 +5,7 @@ import { CLASS_COLOURS, type Invite, type Member, type Offering, type Role } fro
 import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
+import { PrintExport } from '../components/PrintExport';
 
 export function StaffPage() {
   const { schoolId, school, members, classes, offerings, me, policy } = useSchool();
@@ -46,7 +47,8 @@ export function StaffPage() {
   };
   const toggleSubject = (m: Member, o: Offering) => setTeaching(schoolId, m, o, !(m.offeringIds ?? []).includes(o.id), offerings).catch(fail);
 
-  const sorted = [...members].sort((a, b) => ['owner', 'admin', 'teacher'].indexOf(a.role) - ['owner', 'admin', 'teacher'].indexOf(b.role) || a.name.localeCompare(b.name));
+  const rank = (r: string) => ['owner', 'admin', 'teacher', 'bursar'].indexOf(r);
+  const sorted = [...members].sort((a, b) => rank(a.role) - rank(b.role) || a.name.localeCompare(b.name));
 
   return (
     <div className="page">
@@ -57,6 +59,23 @@ export function StaffPage() {
             Form teachers see their arm’s students, register and report cards. Subject teachers see only their subjects. {one ? 'Your school allows one form class per teacher.' : 'Your school allows several form classes per teacher.'}
           </p>
         </div>
+        <PrintExport
+          title="Staff list"
+          target={() => [document.querySelector<HTMLElement>('.staff-panel')]}
+          rows={() => [
+            ['Name', 'Role', 'Email', 'Form class', 'Subjects taught'],
+            ...sorted.map((m) => [
+              m.name,
+              m.role,
+              m.email,
+              classes.filter((c) => m.classIds.includes(c.id)).map((c) => c.name).join(', '),
+              offerings
+                .filter((o) => (m.offeringIds ?? []).includes(o.id))
+                .map((o) => `${o.subject} (${classes.find((c) => c.id === o.classId)?.name ?? ''})`)
+                .join('; '),
+            ]),
+          ]}
+        />
       </header>
 
       <section className="panel">
@@ -113,7 +132,7 @@ export function StaffPage() {
         )}
       </section>
 
-      <section className="panel">
+      <section className="panel staff-panel">
         <h2 className="h3">Staff ({members.length})</h2>
         <ol className="staff-list">
           {sorted.map((m) => {

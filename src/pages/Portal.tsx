@@ -83,7 +83,7 @@ export function Portal() {
             </section>
           )}
           {card ? (
-            <ReportCardView card={card} schoolName={result.schoolName} schoolAddress={result.schoolAddress} studentName={result.studentName} admissionNo={result.admissionNo} />
+            <ReportCardView card={card} schoolName={result.schoolName} schoolAddress={result.schoolAddress} motto={result.schoolMotto} logo={result.schoolLogo} studentName={result.studentName} admissionNo={result.admissionNo} />
           ) : (
             <p className="muted">No report has been published for this PIN yet.</p>
           )}

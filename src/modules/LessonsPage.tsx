@@ -11,6 +11,7 @@ import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import type { WorkspaceCtx } from '../school/Workspace';
 import './lessons.css';
+import { printParts } from '../lib/print';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -101,7 +102,7 @@ export function LessonsPage() {
   const list = [...lessons.data].filter((l) => !filter || l.subject === filter).sort((a, b) => b.at - a.at);
 
   return (
-    <div className="page">
+    <div className="page lessons-page">
       <header className="page-head">
         <div>
           <h1 className="display-sm">Lesson notes and quizzes</h1>
@@ -222,7 +223,7 @@ export function LessonsPage() {
               {open.subject}, {open.level}: {open.topic}
             </h2>
             <div className="head-actions no-print">
-              <button className="pill ghost" onClick={() => window.print()}>
+              <button className="pill ghost" onClick={() => printParts([document.querySelector<HTMLElement>('.lesson-print')], { title: 'Lesson note' })}>
                 Print note and quiz
               </button>
               {open.quiz.length > 0 && (

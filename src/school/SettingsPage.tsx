@@ -23,6 +23,20 @@ export function SettingsPage() {
   const [address, setAddress] = useState(school.address ?? '');
   const [motto, setMotto] = useState(school.motto ?? '');
   const [principal, setPrincipal] = useState(school.principalName ?? '');
+  const [phone, setPhone] = useState(school.phone ?? '');
+  const [email, setEmail] = useState(school.email ?? '');
+  const [logo, setLogo] = useState(school.logo ?? '');
+  /** Shrink the crest to 240px so it fits on the school record and prints sharply. */
+  const pickLogo = async (file: File | undefined) => {
+    if (!file) return;
+    const bmp = await createImageBitmap(file);
+    const k = Math.min(1, 240 / Math.max(bmp.width, bmp.height));
+    const c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * k);
+    c.height = Math.round(bmp.height * k);
+    c.getContext('2d')!.drawImage(bmp, 0, 0, c.width, c.height);
+    setLogo(c.toDataURL('image/png'));
+  };
   const [levels, setLevels] = useState(school.levels.join('\n'));
   const [newSubject, setNewSubject] = useState('');
   const [assess, setAssess] = useState(assessmentsOf(school).map((a) => `${a.label}, ${a.max}`).join('\n'));
@@ -45,6 +59,9 @@ export function SettingsPage() {
         address: address.trim(),
         motto: motto.trim(),
         principalName: principal.trim(),
+        phone: phone.trim(),
+        email: email.trim(),
+        logo,
         levels: lines(levels),
         assessments,
         gradeBands,
@@ -165,6 +182,30 @@ export function SettingsPage() {
             <span className="mono">Principal or head teacher</span>
             <input value={principal} onChange={(e) => setPrincipal(e.target.value)} />
           </label>
+          <label className="field">
+            <span className="mono">Phone, on printouts</span>
+            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0803 000 0000" inputMode="tel" />
+          </label>
+          <label className="field">
+            <span className="mono">Email, on printouts</span>
+            <input value={email} onChange={(e) => setEmail(e.target.value)} placeholder="office@yourschool.edu.ng" inputMode="email" />
+          </label>
+          <div className="field logo-field">
+            <span className="mono">School crest or logo, on every printout</span>
+            <div className="logo-row">
+              {logo ? <img src={logo} alt="School crest" className="logo-preview" /> : <span className="logo-preview empty muted small">None yet</span>}
+              <label className="pill ghost">
+                {logo ? 'Change' : 'Upload'}
+                <input type="file" accept="image/*" hidden onChange={(e) => pickLogo(e.currentTarget.files?.[0])} />
+              </label>
+              {logo && (
+                <button type="button" className="link" onClick={() => setLogo('')}>
+                  Remove
+                </button>
+              )}
+            </div>
+            <small className="muted">Save settings to apply. Without one, printouts show the school’s initials.</small>
+          </div>
           <label className="field">
             <span className="mono">Country</span>
             <select value={country} onChange={(e) => setCountry(e.target.value)}>

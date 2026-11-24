@@ -6,6 +6,7 @@ import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
+import { PrintExport } from '../components/PrintExport';
 
 export function InventoryPage() {
   const { schoolId, isAdmin } = useSchool();
@@ -101,6 +102,7 @@ export function InventoryPage() {
           <span className="mono">Find an item</span>
           <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Name, category or location" />
         </label>
+        <PrintExport title="Inventory" fromTable />
       </header>
 
       {low.length > 0 && (

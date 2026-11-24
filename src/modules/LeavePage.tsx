@@ -7,6 +7,7 @@ import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
+import { PrintExport } from '../components/PrintExport';
 
 const showDate = (iso: string) => (iso ? new Date(iso + 'T00:00:00').toLocaleDateString() : '—');
 const statusLabel: Record<LeaveRequest['status'], string> = { pending: 'Pending', approved: 'Approved', declined: 'Declined' };
@@ -66,6 +67,7 @@ export function LeavePage() {
           <h1 className="display-sm">Leave</h1>
           <p className="lede">{isAdmin ? 'Requests from staff, and who is away today.' : 'Ask for time off and track your requests.'}</p>
         </div>
+        <PrintExport title="Staff leave" />
       </header>
 
       <section className="panel wide">

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { ErrorBoundary } from '../components/ErrorBoundary';
+import { setLetterhead } from '../lib/print';
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { query, where } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
@@ -63,6 +64,11 @@ function Frame() {
     return () => ro.disconnect();
   }, []);
   const { school, schoolId, me, isAdmin, terms, term, currentTerm, viewingPast, termClosed, setViewTerm, formClasses, myOfferings, classes } = useSchool();
+  // Everything printed from this school carries its letterhead.
+  useEffect(() => {
+    setLetterhead({ name: school.name, address: school.address, motto: school.motto, phone: school.phone, email: school.email, logo: school.logo });
+    return () => setLetterhead(null);
+  }, [school.name, school.address, school.motto, school.phone, school.email, school.logo]);
   const { user, signOut } = useAuth();
   const nav = useNavigate();
   const toast = useToast();

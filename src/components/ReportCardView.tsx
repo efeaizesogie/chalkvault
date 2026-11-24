@@ -6,6 +6,7 @@ export function ReportCardView(props: {
   schoolName: string;
   schoolAddress?: string;
   motto?: string;
+  logo?: string;
   principalName?: string;
   studentName: string;
   admissionNo: string;
@@ -14,7 +15,8 @@ export function ReportCardView(props: {
   return (
     <article className="report-card-sheet">
       <header className="rc-head">
-        <div>
+        {props.logo && <img className="rc-logo" src={props.logo} alt="" />}
+        <div className="rc-school-block">
           <h2 className="rc-school">{props.schoolName}</h2>
           {props.schoolAddress && <p className="rc-sub">{props.schoolAddress}</p>}
           {props.motto && <p className="rc-sub rc-motto">{props.motto}</p>}

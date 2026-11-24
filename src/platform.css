@@ -208,8 +208,6 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 }
 
 @media print {
-  .ws .masthead, .side, .demo-banner, .page > *:not(.print-only):not(:has(.report-card-sheet)):not(:has(.slip-card)), .landing { display: none !important; }
-  .shell { display: block; border: 0; }
   .report-card h1 { font: 400 32px var(--serif); margin: 0; }
   .report-card > p { color: var(--print-ink-2); margin: 4px 0 24px; }
   .report-card article { border-top: 1px solid var(--print-rule); padding: 12px 0; break-inside: avoid; }
@@ -262,7 +260,6 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .gradebook input:focus { border-color: var(--ink); outline: none; box-shadow: 0 0 0 2px var(--ticket); }
 .gb-total { font-weight: 600; font-variant-numeric: tabular-nums; }
 @media print {
-  .class-tabs, .att-bar, .table-wrap { display: none !important; }
   .broadsheet h1 { font: 400 28px var(--serif); margin: 0; }
   .broadsheet > p { margin: 4px 0 16px; color: var(--print-ink-2); }
   .broadsheet table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -366,10 +363,8 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 }
 
 @media print {
-  .portal-top, .class-tabs, .subject-head, .row-actions, .gradebook, .table-wrap, .slips-panel .row-actions { display: none !important; }
   .report-card-sheet { border: 0; padding: 0; max-width: none; break-after: page; }
   .print-cards { display: block; }
-  .print-cards ~ * { display: none; }
   .slip-card { break-inside: avoid; }
 }
 
@@ -377,7 +372,17 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .past-banner .link { color: var(--ticket); }
 
 /* Principal dashboard */
-.dashboard .stat-grid { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); }
+/* Figures strip: dividers are the 1px gaps between cells, so borders are always whole; the last figure stretches to finish its row. */
+.page { container-type: inline-size; }
+.stat-grid { gap: 1px; background: var(--ink); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); grid-template-columns: none; }
+.stat-grid > .stat { border: 0; align-content: start; padding: 16px; }
+@container (max-width: 700px) {
+  .stat-grid { grid-auto-flow: row; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .stat-grid > :last-child:nth-child(odd) { grid-column: 1 / -1; }
+}
+@container (max-width: 380px) { .stat-grid { grid-template-columns: minmax(0, 1fr); } }
+.dashboard .stat b { font-size: clamp(26px, 2.4vw, 36px); }
+.stat:hover { background: var(--paper); }
 .brief { gap: 12px; }
 .brief-text { font: 400 18px/1.55 var(--serif); max-width: 72ch; }
 .brief-actions { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
@@ -509,4 +514,29 @@ select:not([multiple]):not([size]) {
   .settings-nav { position: static; display: flex; overflow-x: auto; border-left: 0; border-bottom: 1px solid var(--rule); scrollbar-width: none; }
   .settings-nav a { white-space: nowrap; border-left: 0; border-bottom: 3px solid transparent; margin: 0 0 -1px; }
   .settings-nav a.on { border-bottom-color: var(--ink); }
+}
+
+.logo-row { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.logo-preview { width: 56px; height: 56px; object-fit: contain; border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); display: grid; place-items: center; }
+.logo-row .pill { cursor: pointer; }
+
+.rc-head { align-items: center; }
+.rc-logo { width: 64px; height: 64px; object-fit: contain; flex: none; }
+.rc-school-block { flex: 1; min-width: 0; }
+
+/* Dropdowns: where the browser allows it (Chrome 135 and later), the open list is styled too, not just the closed box. */
+@supports (appearance: base-select) {
+  select:not([multiple]):not([size]), ::picker(select) { appearance: base-select; }
+  select:not([multiple]):not([size]) { display: inline-flex; align-items: center; }
+  select::picker-icon { display: none; }
+  ::picker(select) {
+    border: 1px solid var(--ink); border-radius: 12px; background: var(--sheet); color: var(--ink);
+    box-shadow: var(--lift); padding: 4px; margin-block: 4px; max-height: min(360px, 60dvh); overflow-y: auto;
+  }
+  select option { padding: 8px 12px; border-radius: 8px; font: 400 15px/1.3 var(--sans); cursor: pointer; display: flex; gap: 8px; align-items: center; }
+  select option:hover, select option:focus-visible { background: var(--paper-2); outline: none; }
+  select option:checked { font-weight: 600; background: var(--paper); }
+  select option::checkmark { content: '✓'; color: var(--ink); }
+  select optgroup { font: 600 12px/1.4 var(--sans); color: var(--muted); padding: 6px 8px 2px; }
+  select optgroup option { color: var(--ink); }
 }

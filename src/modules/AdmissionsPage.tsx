@@ -7,6 +7,7 @@ import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './admissions.css';
+import { PrintExport } from '../components/PrintExport';
 
 const STATUSES: { key: Application['status']; label: string }[] = [
   { key: 'new', label: 'New' },
@@ -97,6 +98,7 @@ export function AdmissionsPage() {
           <h1 className="display-sm">Admissions</h1>
           <p className="lede">Share one link with parents. Every application lands here for you to review and enrol.</p>
         </div>
+        <PrintExport title="Admissions" />
       </header>
 
       <section className="panel wide">

@@ -18,5 +18,5 @@
 @media print {
   .lesson-print { border: 0; }
   .answer-key { break-before: page; }
-  .page > section:not(.lesson-print), .page > header { display: none !important; }
+  .lessons-page > section:not(.lesson-print), .lessons-page > header { display: none !important; }
 }
