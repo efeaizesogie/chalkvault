@@ -4,7 +4,7 @@ import { query, where } from 'firebase/firestore';
 import { mod, paths, saveIn, todayISO } from '../data/api';
 import { useQuery } from '../data/hooks';
 import type { AttendanceDay, Invoice, ParentMessage, StudentProfile } from '../data/types';
-import { draftParentMessage, PrivacyBlock, translateMessage } from '../lib/ai';
+import { draftParentMessage, PrivacyBlock } from '../lib/ai';
 import { naira } from '../lib/fees';
 import { whatsappLink } from '../lib/share';
 import { download } from '../lib/export';
@@ -26,7 +26,7 @@ const KINDS: { id: Kind; label: string; hint: string }[] = [
   { id: 'custom', label: 'Your own message', hint: 'Every parent in the chosen arms.' },
 ];
 
-/** Messages to parents in each family's own language, sent by WhatsApp or through an SMS gateway. */
+/** Messages to parents, written once by the AI with placeholders and filled in per family on this computer; sent by WhatsApp or through an SMS service. */
 export function MessagesPage() {
   const { schoolId, school, classes, formClasses, isAdmin, me, term } = useSchool();
   const ws = useOutletContext<WorkspaceCtx>();
@@ -64,7 +64,6 @@ export function MessagesPage() {
       return g ? [{ student: s, guardian: g.name, phone: g.phone, language: g.language || 'English', amount }] : [];
     });
   }, [kind, armIds, students, today.data, invoices.data]);
-  const languages = [...new Set(recipients.map((r) => r.language))];
   const portal = new URL(`${import.meta.env.BASE_URL}results`, location.origin).toString();
 
   const fill = (template: string, r: Recipient) =>
@@ -84,19 +83,6 @@ export function MessagesPage() {
       const base = await draftParentMessage(kind, gist, school.name);
       const out: Record<string, { text: string; source: 'on_device' | 'in_cloud' }> = { English: { text: base.text, source: base.source } };
       await ws.log({ task: 'Parent message draft', source: base.source, charsSent: base.source === 'in_cloud' ? base.prompt.length : 0, detail: base.source === 'in_cloud' ? base.prompt : 'Written by Gemini Nano on this device.' });
-      for (const lang of languages.filter((l) => l !== 'English')) {
-        setBusy(`Translating into ${lang}…`);
-        // A translation must keep exactly the same placeholders, or a name or amount could land in the wrong place.
-        const sig = (s: string) => (s.match(/\[[A-Z]+\]/g) ?? []).sort().join();
-        let t = await translateMessage(base.text, lang);
-        if (sig(t.text) !== sig(base.text)) t = await translateMessage(base.text, lang);
-        if (sig(t.text) !== sig(base.text)) {
-          toast(`The ${lang} version didn’t keep the names and amounts in place, so those parents will get the English message.`, 'warn');
-          continue;
-        }
-        out[lang] = { text: t.text, source: t.source };
-        await ws.log({ task: `Parent message (${lang})`, source: t.source, charsSent: t.source === 'in_cloud' ? t.prompt.length : 0, detail: t.source === 'in_cloud' ? `A template with placeholders, no names:\n${t.prompt}` : 'Translated by Gemini Nano on this device.' });
-      }
       setTemplates(out);
     } catch (e) {
       toast(e instanceof PrivacyBlock ? e.message : `Couldn’t write the message. ${friendlyError(e)}`, 'error');
@@ -130,7 +116,7 @@ export function MessagesPage() {
       <header className="page-head">
         <div>
           <h1 className="display-sm">Messages to parents</h1>
-          <p className="lede">The AI writes one message without any names, translates it into each family’s language, and the names and amounts are filled in on this computer.</p>
+          <p className="lede">The AI writes one message without any names, and each family’s names, amounts and result PIN are filled in on this computer.</p>
         </div>
         <PrintExport title="Messages to parents" />
       </header>
@@ -165,7 +151,7 @@ export function MessagesPage() {
         <div className="row-actions">
           <span className="muted small">
             {recipients.length} parent{recipients.length === 1 ? '' : 's'}
-            {languages.length ? `, in ${languages.join(', ')}` : ''}.
+            .
           </span>
           <button className="ticket" onClick={draft} disabled={!!busy || !recipients.length}>
             {busy || 'Write the message'}
@@ -203,7 +189,7 @@ export function MessagesPage() {
                 <div className="msg-who">
                   <b>{r.guardian}</b>
                   <span className="muted small">
-                    {r.student.name}, {r.phone || 'no phone'}, {r.language}
+                    {r.student.name}, {r.phone || 'no phone'}
                   </span>
                 </div>
                 <p className="msg-text">{text}</p>

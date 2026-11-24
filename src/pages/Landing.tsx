@@ -1,12 +1,13 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 
-type Feature = { title: string; body: string; soon?: boolean };
-const GROUPS: { title: string; items: Feature[] }[] = [
+type Feature = { title: string; body: string; soon?: boolean; ai?: boolean };
+const GROUPS: { title: string; summary: string; items: Feature[] }[] = [
   {
     title: 'Setting up and running the school',
+    summary: 'Get your records in, set your rules, and keep the term running.',
     items: [
-      { title: 'Bring in your old records', body: 'Photos, PDFs, Excel or CSV. Gemini Nano sorts each page (class list, score sheet, ledger, staff list) and reads it on the laptop. You check every row before it is saved.' },
+      { title: 'Bring in your old records', ai: true, body: 'Photos, PDFs, Excel or CSV. Gemini Nano sorts each page (class list, score sheet, ledger, staff list) and reads it on the laptop. You check every row before it is saved.' },
       { title: 'Guided setup with suggestions', body: 'Pick levels from Creche to SS 3, arms from A to Gold or Diamond, and every Nigerian subject from ready lists instead of typing them.' },
       { title: 'Classes, arms and subjects', body: 'JSS 1A, JSS 1B, SS 2 Gold: each arm with its subjects. Electives can have their own students.' },
       { title: 'Your school, your rules', body: 'Who takes attendance, how many form classes a teacher holds, whether comments need approval, the score sheet, the grade bands and the promotion rule.' },
@@ -18,31 +19,34 @@ const GROUPS: { title: string; items: Feature[] }[] = [
   },
   {
     title: 'For the principal',
+    summary: 'See where the school stands today, and how it compares with last term.',
     items: [
       { title: 'A dashboard of the term', body: 'Attendance week by week and by arm, subject and arm averages, grade spread, fees by arm, staff progress and students who need attention, each against last term.' },
-      { title: 'This morning’s brief', body: 'A short read of where the school stands, written from the dashboard’s own figures by Gemini Nano on the laptop. “Explain this” on any chart.' },
-      { title: 'Ask Chalkvault', body: 'Ask “Who is failing two subjects?” or “Which arm has the lowest attendance?” and get an answer from your own records.' },
+      { title: 'This morning’s brief', ai: true, body: 'A short read of where the school stands, written from the dashboard’s own figures by Gemini Nano on the laptop. “Explain this” on any chart.' },
+      { title: 'Ask Chalkvault', ai: true, body: 'Ask “Who is failing two subjects?” or “Which arm has the lowest attendance?” and get an answer from your own records.' },
       { title: 'Term against term, year against year', body: 'Closing a term saves its figures, so every later dashboard can compare. Third term report cards carry the cumulative result.' },
     ],
   },
   {
     title: 'Teaching and results',
+    summary: 'From the daily register to the third term report card.',
     items: [
-      { title: 'Registers in one tap', body: 'Daily or lesson by lesson, as your school chooses. Or photograph the paper register and Gemini Nano reads it on the laptop.' },
-      { title: 'Score sheets that fill themselves', body: 'Type scores, scan a photographed score sheet, or import results from your CBT system. The AI matches the columns for you.' },
-      { title: 'Report comments, written on the laptop', body: 'Gemini Nano turns rough notes, scores and attendance into a warm, specific comment, streaming as you watch. A whole class in one click.' },
-      { title: 'Approval and follow-up', body: 'Comments go to the head for approval and lock once approved. The AI flags academic, attendance or wellbeing concerns as it writes.' },
+      { title: 'Registers in one tap', ai: true, body: 'Daily or lesson by lesson, as your school chooses. Or photograph the paper register and Gemini Nano reads it on the laptop.' },
+      { title: 'Score sheets that fill themselves', ai: true, body: 'Type scores, scan a photographed score sheet, or import results from your CBT system. The AI matches the columns for you.' },
+      { title: 'Report comments, written on the laptop', ai: true, body: 'Gemini Nano turns rough notes, scores and attendance into a warm, specific comment, streaming as you watch. A whole class in one click.' },
+      { title: 'Approval and follow-up', ai: true, body: 'Comments go to the head for approval and lock once approved. The AI flags academic, attendance or wellbeing concerns as it writes.' },
       { title: 'Report cards and broadsheets', body: 'Every subject, total, grade, position and remark, with form teacher and principal comments, and the cumulative result in third term.' },
       { title: 'Promotion by your rule', body: 'Set a pass mark and the subjects that need a credit. Students who miss it are flagged to repeat, and you decide.' },
-      { title: 'Lesson notes and quizzes', body: 'Lesson notes in the scheme-of-work format and quizzes you can print or load into your CBT system.' },
+      { title: 'Lesson notes and quizzes', ai: true, body: 'Lesson notes in the scheme-of-work format and quizzes you can print or load into your CBT system.' },
     ],
   },
   {
     title: 'Money, parents and paperwork',
+    summary: 'Fees, parents and every printout, on your letterhead.',
     items: [
-      { title: 'Fees the way you charge them', body: 'Class fees, optional levies, sibling, staff and scholarship discounts, part payments and arrears. Photograph a bank teller and the payment fills itself in.' },
+      { title: 'Fees the way you charge them', ai: true, body: 'Class fees, optional levies, sibling, staff and scholarship discounts, part payments and arrears. Photograph a bank teller and the payment fills itself in.' },
       { title: 'Results for parents by PIN', body: 'Publish report cards and print a private result PIN for each student. Parents see the card, attendance and fee balance online without an account.' },
-      { title: 'Messages in every family’s language', body: 'Absence alerts, fee reminders and results notices in English, Yoruba, Hausa, Igbo and more, sent by WhatsApp or SMS.' },
+      { title: 'Messages to parents', ai: true, body: 'Absence alerts, fee reminders and results notices with each child’s details filled in, sent from the school’s WhatsApp or its SMS service.' },
       { title: 'Print and export anything', body: 'Overview, report cards, broadsheets, timetables, fees statements, receipts and class lists print under your letterhead, and every list exports to Excel.' },
       { title: 'An audit ledger', body: 'Every AI request is logged: where it ran, and exactly what, if anything, left the device.' },
       { title: 'Google Drive import', body: 'Pull CBT results straight from Google Drive.', soon: true },
@@ -189,20 +193,30 @@ export function Landing() {
 
       <section className="lp-section" id="features">
         <h2 className="lp-h2">What’s inside</h2>
-        {GROUPS.map((g) => (
-          <div key={g.title} className="lp-group">
-            <h3 className="lp-group-title">{g.title}</h3>
-            <div className="lp-features">
-              {g.items.map((f) => (
-                <article key={f.title} className={`lp-feature ${f.soon ? 'soon' : ''}`}>
-                  <h3>{f.title}</h3>
-                  {f.soon && <span className="soon-tag">Coming soon</span>}
-                  <p>{f.body}</p>
-                </article>
-              ))}
+        <p className="lede lp-features-lede">Four parts, in the order a school meets them. Anything marked <span className="ai-tag">Gemini Nano</span> uses the AI on the teacher’s own laptop.</p>
+        <div className="lp-rows">
+          {GROUPS.map((g, gi) => (
+            <div key={g.title} className="lp-row">
+              <div className="lp-row-head">
+                <span className="step-no">{String(gi + 1).padStart(2, '0')}</span>
+                <h3>{g.title}</h3>
+                <p>{g.summary}</p>
+              </div>
+              <ul className="lp-list">
+                {g.items.map((f) => (
+                  <li key={f.title} className={f.soon ? 'soon' : ''}>
+                    <b>
+                      {f.title}
+                      {f.ai && <span className="ai-tag">Gemini Nano</span>}
+                      {f.soon && <span className="soon-tag">Coming soon</span>}
+                    </b>
+                    <span>{f.body}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </section>
 
       <section className="lp-section lp-offline">
