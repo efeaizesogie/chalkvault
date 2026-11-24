@@ -249,6 +249,9 @@ function Frame() {
               <NavLink to={`/s/${schoolId}/alumni`} className="side-link">
                 Alumni
               </NavLink>
+              <NavLink to={`/s/${schoolId}/import`} className="side-link">
+                Bring in records
+              </NavLink>
               <NavLink to={`/s/${schoolId}/settings`} className="side-link">
                 Settings
               </NavLink>

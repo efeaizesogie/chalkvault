@@ -813,3 +813,139 @@ export async function alignToStandards(deidentified: string, framework: string) 
   const obj = JSON.parse(res.response.text()) as { comment?: string; standards?: string[] };
   return { comment: String(obj.comment ?? ''), standards: obj.standards ?? [], prompt, ms: performance.now() - t0 };
 }
+
+// ---------- Document import: sort a page, then read it ----------
+
+export const PAGE_KINDS = ['class_list', 'score_sheet', 'register', 'bio_data', 'fee_ledger', 'staff_list', 'other'] as const;
+export type PageKind = (typeof PAGE_KINDS)[number];
+export const PAGE_KIND_LABEL: Record<PageKind, string> = {
+  class_list: 'Class list',
+  score_sheet: 'Score sheet or broadsheet',
+  register: 'Attendance register',
+  bio_data: 'Student bio-data form',
+  fee_ledger: 'Fee ledger',
+  staff_list: 'Staff list',
+  other: 'Something else',
+};
+
+export interface ImportedStudent {
+  name: string;
+  admissionNo?: string;
+  gender?: string;
+  dob?: string;
+  guardianName?: string;
+  guardianPhone?: string;
+  balance?: number;
+  scores?: Record<string, number>;
+  /** Fields the model could not read with confidence (common with handwriting). */
+  unsure?: string[];
+}
+export interface ImportedStaff {
+  name: string;
+  role?: string;
+  phone?: string;
+  email?: string;
+  subjects?: string[];
+  classes?: string[];
+}
+export interface PageReading {
+  kind: PageKind;
+  className?: string;
+  subject?: string;
+  students: ImportedStudent[];
+  staff: ImportedStaff[];
+}
+
+function pageModel(local: boolean, schema: object) {
+  return getGenerativeModel(
+    ai(),
+    local
+      ? { mode: InferenceMode.ONLY_ON_DEVICE, onDeviceParams: { createOptions, promptOptions: { responseConstraint: schema } } }
+      : { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { responseMimeType: 'application/json', temperature: 0 } } },
+  );
+}
+function parseJson<T>(text: string): T {
+  return JSON.parse(text.trim().replace(/^```(?:json)?|```$/g, '')) as T;
+}
+
+/**
+ * Read one page of a school's old records. First the model sorts the page into a kind (enum output),
+ * then it reads it into JSON shaped for that kind. Pages show children's names, so this runs on the device;
+ * the cloud is used only when the school's admin has switched on cloud scanning.
+ */
+export async function readRecordPage(
+  image: { base64: string; mimeType: 'image/jpeg' | 'image/png' },
+  ctx: { levels: string[]; subjects: string[]; columns: { key: string; label: string; max: number }[] },
+  allowCloud: boolean,
+): Promise<PageReading & { source: Source; ms: number }> {
+  const local = (await deviceStatus()) === 'available';
+  if (!local && !allowCloud) {
+    throw new PrivacyBlock('Reading old records needs Gemini Nano on this computer, because the pages show children’s names. An admin can allow cloud scanning in Settings.');
+  }
+  const img = { type: 'inlineData' as const, inlineData: { data: image.base64, mimeType: image.mimeType } };
+  const t0 = performance.now();
+  const source: Source = local ? 'on_device' : 'in_cloud';
+
+  // 1. What kind of page is this?
+  const kindSchema = { type: 'object', properties: { kind: { type: 'string', enum: [...PAGE_KINDS] } }, required: ['kind'] };
+  const sort = await pageModel(local, kindSchema).generateContent([
+    {
+      type: 'text',
+      text: [
+        'This is a photo or scan of one page of a school’s records. Say what kind of page it is.',
+        'class_list: a list of pupils in a class, maybe with admission numbers or parents.',
+        'score_sheet: marks or scores per pupil, e.g. CA, test, exam, total, or a broadsheet of subjects.',
+        'register: a daily attendance register with ticks or marks per day.',
+        'bio_data: an admission or bio-data form about one or more pupils (date of birth, parent, address).',
+        'fee_ledger: fees, payments or balances per pupil.',
+        'staff_list: a list of teachers or staff.',
+        'other: anything else.',
+      ].join('\n'),
+    },
+    img,
+  ]);
+  const sorted = parseJson<{ kind?: string }>(sort.response.text()).kind ?? 'other';
+  const kind: PageKind = (PAGE_KINDS as readonly string[]).includes(sorted) ? (sorted as PageKind) : 'other';
+  if (kind === 'other') return { kind, students: [], staff: [], source, ms: performance.now() - t0 };
+
+  // 2. Read it, in the shape that kind needs.
+  const unsure = { type: 'array', items: { type: 'string' }, description: 'Names of fields you could not read clearly.' };
+  const scoreProps = Object.fromEntries(ctx.columns.map((c) => [c.key, { type: 'number', description: `${c.label}, out of ${c.max}` }]));
+  const studentProps: Record<string, object> = { name: { type: 'string' }, admissionNo: { type: 'string' }, unsure };
+  if (kind === 'class_list' || kind === 'bio_data') Object.assign(studentProps, { gender: { type: 'string', enum: ['male', 'female', ''] }, guardianName: { type: 'string' }, guardianPhone: { type: 'string' } });
+  if (kind === 'bio_data') Object.assign(studentProps, { dob: { type: 'string', description: 'Date of birth as YYYY-MM-DD' } });
+  if (kind === 'fee_ledger') Object.assign(studentProps, { balance: { type: 'number', description: 'Amount still owed in naira' } });
+  if (kind === 'score_sheet') Object.assign(studentProps, { scores: { type: 'object', properties: scoreProps } });
+  const staffItem = { type: 'object', properties: { name: { type: 'string' }, role: { type: 'string' }, phone: { type: 'string' }, email: { type: 'string' }, subjects: { type: 'array', items: { type: 'string' } }, classes: { type: 'array', items: { type: 'string' } } }, required: ['name'] };
+  const schema =
+    kind === 'staff_list'
+      ? { type: 'object', properties: { staff: { type: 'array', items: staffItem } }, required: ['staff'] }
+      : {
+          type: 'object',
+          properties: {
+            className: { type: 'string', description: 'The class or arm written on the page, e.g. JSS 1A, or empty.' },
+            ...(kind === 'score_sheet' ? { subject: { type: 'string', description: 'The subject, or empty for a broadsheet.' } } : {}),
+            students: { type: 'array', items: { type: 'object', properties: studentProps, required: ['name'] } },
+          },
+          required: ['className', 'students'],
+        };
+  const guide = [
+    `This page is a ${PAGE_KIND_LABEL[kind].toLowerCase()} from a school. Copy what is written on it into JSON.`,
+    `The school’s class levels: ${ctx.levels.join(', ')}. Its subjects: ${ctx.subjects.join(', ')}.`,
+    kind === 'score_sheet' ? `Score columns: ${ctx.columns.map((c) => `${c.key} = "${c.label}" (out of ${c.max})`).join('; ')}. Match the sheet’s columns to these; leave out a column the sheet does not have.` : '',
+    'Copy names exactly as written. Phone numbers as written. Leave a field out if it is not on the page. Never guess: if handwriting is unclear, give your best reading and add the field name to "unsure".',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const read = await pageModel(local, schema).generateContent([{ type: 'text', text: guide }, img]);
+  const raw = parseJson<{ className?: string; subject?: string; students?: ImportedStudent[]; staff?: ImportedStaff[] }>(read.response.text());
+  const clean = (s: unknown) => (typeof s === 'string' ? s.trim() : '');
+  const students = (raw.students ?? [])
+    .filter((s) => clean(s.name))
+    .map((s) => ({
+      ...s,
+      name: clean(s.name).replace(/\s+/g, ' '),
+      scores: s.scores ? Object.fromEntries(ctx.columns.filter((c) => typeof s.scores?.[c.key] === 'number').map((c) => [c.key, Math.min(c.max, Math.max(0, s.scores![c.key]))])) : undefined,
+    }));
+  return { kind, className: clean(raw.className), subject: clean(raw.subject), students, staff: (raw.staff ?? []).filter((s) => clean(s.name)), source, ms: performance.now() - t0 };
+}

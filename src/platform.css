@@ -395,3 +395,4 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .check-list li .mono { display: inline-block; min-width: 52px; }
 .check-list li.todo .mono { color: var(--danger); }
 .check-list li.ok .mono { color: var(--good); }
+.setup { display: grid; gap: 10px; }

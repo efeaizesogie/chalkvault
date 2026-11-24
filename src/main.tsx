@@ -16,6 +16,7 @@ import { StudentsPage } from './school/StudentsPage';
 import { StudentRecord } from './school/StudentRecord';
 import { StaffPage } from './school/StaffPage';
 import { SettingsPage } from './school/SettingsPage';
+import { ImportPage } from './school/ImportPage';
 import { ClassesPage } from './school/ClassesPage';
 import { SubjectPage } from './school/SubjectPage';
 import { NoticesPage } from './school/NoticesPage';
@@ -75,6 +76,7 @@ createRoot(document.getElementById('root')!).render(
               <Route path="students/:studentId" element={<StudentRecord />} />
               <Route path="staff" element={<StaffPage />} />
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="import" element={<ImportPage />} />
             </Route>
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -181,22 +181,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
         <Figure label="Need attention" value={s ? s.atRisk : null} unit="" before={two ? before?.atRisk : undefined} better="down" note="Low average, failing two subjects, or attendance under 80%." />
       </section>
 
-      {(classes.length === 0 || members.length < 2) && !school.demo && (
-        <ol className="checklist">
-          <li className={classes.length ? 'done' : ''}>
-            <span className="mono">01</span>
-            <Link to={`/s/${schoolId}/settings`}>Set up classes, arms and subjects</Link>
-          </li>
-          <li className={members.length > 1 ? 'done' : ''}>
-            <span className="mono">02</span>
-            <Link to={`/s/${schoolId}/staff`}>Invite teachers and assign their subjects and form classes</Link>
-          </li>
-          <li className={active.length ? 'done' : ''}>
-            <span className="mono">03</span>
-            <Link to={`/s/${schoolId}/classes`}>Add students to each arm</Link>
-          </li>
-        </ol>
-      )}
+      {!school.demo && <SetupChecklist students={active.length} hasInvoices={now.invoices.length > 0} />}
 
       <div className="record-grid">
         <ChartCard
@@ -384,6 +369,43 @@ function RiskPanel({ risks, armName, explain, busy }: { risks: StudentRisk[]; ar
         <button className="link small" onClick={() => setAll((v) => !v)}>
           {all ? 'Show fewer' : `Show all ${risks.length}`}
         </button>
+      )}
+    </section>
+  );
+}
+
+/** Setting up from scratch: stays on the dashboard until every step is done. */
+function SetupChecklist({ students, hasInvoices }: { students: number; hasInvoices: boolean }) {
+  const { schoolId, school, classes, members, currentTerm } = useSchool();
+  const fees = useQuery<{ id: string }>(mod(schoolId, 'feeItems'), `setup-fees:${schoolId}`);
+  const notices = useNotices();
+  const steps = [
+    { done: !!(school.address || school.motto || school.principalName), to: 'settings', text: 'School details and rules: address, motto, principal, who takes attendance' },
+    { done: classes.length > 0, to: 'settings', text: 'Classes, arms and subjects' },
+    { done: !!currentTerm?.starts, to: 'settings', text: 'Term calendar: resumption, midterm break, exams and vacation dates' },
+    { done: members.length > 1, to: 'staff', text: 'Invite staff and give them their form classes and subjects' },
+    { done: students > 0, to: 'import', text: 'Students: photograph your class lists or drop in a spreadsheet, or add them by hand under Classes' },
+    { done: fees.data.length > 0, to: 'fees', text: 'Fees: items, discounts and opening balances' },
+    { done: hasInvoices && notices.data.length > 0, to: 'fees', text: 'Go live: raise this term’s invoices and post a welcome notice' },
+  ];
+  if (steps.every((s) => s.done)) return null;
+  return (
+    <section className="setup">
+      <h2 className="h3">
+        Setting up: {steps.filter((s) => s.done).length} of {steps.length} done
+      </h2>
+      <ol className="checklist">
+        {steps.map((s, i) => (
+          <li key={s.text} className={s.done ? 'done' : ''}>
+            <span className="mono">{String(i + 1).padStart(2, '0')}</span>
+            <Link to={`/s/${schoolId}/${s.to}`}>{s.text}</Link>
+          </li>
+        ))}
+      </ol>
+      {students === 0 && (
+        <p className="muted small">
+          Have records on paper or in Excel? <Link to={`/s/${schoolId}/import`}>Bring them in</Link> and Chalkvault sorts them into classes, students, scores and balances for you to check.
+        </p>
       )}
     </section>
   );

@@ -62,7 +62,7 @@ export function FeesPage() {
           optionalIds: existing?.optionalIds ?? [],
           siblingRank: ranks.get(s.id) ?? 0,
           policy: feePolicy,
-          arrears: prev ? Math.max(0, prev.balance) : 0,
+          arrears: prev ? Math.max(0, prev.balance) : Math.max(0, s.openingBalance ?? 0),
           paid: paidOf(payments.data, s.id, termId),
         });
         await saveIn(schoolId, 'invoices', inv);

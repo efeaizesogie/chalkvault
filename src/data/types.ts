@@ -336,6 +336,8 @@ export interface StudentExtras {
   scholarshipPercent?: number;
   medicalNotes?: string;
   routeId?: string;
+  /** Fees owed from before the school joined Chalkvault (from an imported ledger). */
+  openingBalance?: number;
 }
 
 // ---------- Fees ----------
