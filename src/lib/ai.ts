@@ -491,54 +491,94 @@ export async function writeLessonNote(o: { subject: string; level: string; topic
 }
 
 /** Multiple-choice quiz as structured JSON (responseConstraint on-device, responseSchema in the cloud). */
-export async function writeQuiz(o: { subject: string; level: string; topic: string; notes: string; count: number }) {
-  let m = quizModels.get(o.count);
-  if (!m) {
-    const item = {
-      type: 'object',
-      properties: {
-        question: { type: 'string' },
-        options: { type: 'array', items: { type: 'string' }, minItems: 4, maxItems: 4 },
-        answer: { type: 'integer', minimum: 0, maximum: 3, description: 'Index of the correct option.' },
-        explanation: { type: 'string' },
+type QuizQ = { question: string; options: string[]; answer: number; explanation: string };
+const QUIZ_BATCH = 5;
+/** How long one on-device batch may take before the cloud writes it instead (a quiz has no student names). */
+const QUIZ_DEVICE_LIMIT_MS = 120_000;
+
+function quizModel(n: number, mode: InferenceMode) {
+  const key = n * 10 + (mode === InferenceMode.ONLY_IN_CLOUD ? 1 : 0);
+  let m = quizModels.get(key);
+  if (m) return m;
+  const item = {
+    type: 'object',
+    properties: {
+      question: { type: 'string' },
+      options: { type: 'array', items: { type: 'string' }, minItems: 4, maxItems: 4 },
+      answer: { type: 'integer', minimum: 0, maximum: 3, description: 'Index of the correct option.' },
+      explanation: { type: 'string' },
+    },
+    required: ['question', 'options', 'answer', 'explanation'],
+  };
+  const jsonSchema = { type: 'object', properties: { questions: { type: 'array', items: item, minItems: n, maxItems: n } }, required: ['questions'] };
+  m = getGenerativeModel(ai(), {
+    mode,
+    onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] }, promptOptions: { responseConstraint: jsonSchema } },
+    inCloudParams: {
+      model: CLOUD_MODELS[0],
+      generationConfig: {
+        responseMimeType: 'application/json',
+        responseSchema: Schema.object({
+          properties: {
+            questions: Schema.array({
+              items: Schema.object({ properties: { question: Schema.string(), options: Schema.array({ items: Schema.string() }), answer: Schema.integer(), explanation: Schema.string() } }),
+            }),
+          },
+        }),
+        temperature: 0.4,
       },
-      required: ['question', 'options', 'answer', 'explanation'],
-    };
-    const jsonSchema = { type: 'object', properties: { questions: { type: 'array', items: item, minItems: o.count, maxItems: o.count } }, required: ['questions'] };
-    m = getGenerativeModel(ai(), {
-      mode: InferenceMode.PREFER_ON_DEVICE,
-      onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] }, promptOptions: { responseConstraint: jsonSchema } },
-      inCloudParams: {
-        model: CLOUD_MODELS[0],
-        generationConfig: {
-          responseMimeType: 'application/json',
-          responseSchema: Schema.object({
-            properties: {
-              questions: Schema.array({
-                items: Schema.object({ properties: { question: Schema.string(), options: Schema.array({ items: Schema.string() }), answer: Schema.integer(), explanation: Schema.string() } }),
-              }),
-            },
-          }),
-          temperature: 0.4,
-        },
-      },
-    });
-    quizModels.set(o.count, m);
-  }
-  const prompt = [
-    `Write ${o.count} multiple-choice questions for ${o.subject}, ${o.level}, on "${o.topic}", suitable for a computer-based test.`,
-    'Each has exactly four options, one correct answer (its index 0–3), and a one-sentence explanation. Mix easy, medium and harder questions. Vary which option is correct.',
-    o.notes ? `Base them on this lesson note:\n${o.notes.slice(0, 3500)}` : '',
-  ]
-    .filter(Boolean)
-    .join('\n');
+    },
+  });
+  quizModels.set(key, m);
+  return m;
+}
+
+/**
+ * Multiple-choice questions, written five at a time. A small on-device model handles a short structured answer
+ * well but slows to a crawl on a long one, so a 10 or 20 question quiz is several short requests. A batch that
+ * takes too long on the device is written in the cloud instead.
+ */
+export async function writeQuiz(o: { subject: string; level: string; topic: string; notes: string; count: number; onProgress?: (done: number, total: number) => void }) {
   const t0 = performance.now();
-  const res = await m.generateContent(prompt);
-  const obj = JSON.parse(res.response.text().trim().replace(/^```(?:json)?|```$/g, '')) as { questions?: { question: string; options: string[]; answer: number; explanation: string }[] };
-  const questions = (obj.questions ?? [])
-    .filter((q) => q.question && Array.isArray(q.options) && q.options.length >= 2)
-    .map((q) => ({ question: q.question, options: q.options.slice(0, 4), answer: Math.min(Math.max(0, Math.round(q.answer)), Math.min(3, q.options.length - 1)), explanation: q.explanation ?? '' }));
-  return { questions, source: (res.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device') as Source, prompt, ms: performance.now() - t0 };
+  const questions: QuizQ[] = [];
+  const prompts: string[] = [];
+  let usedCloud = false;
+  let usedDevice = false;
+  while (questions.length < o.count) {
+    const n = Math.min(QUIZ_BATCH, o.count - questions.length);
+    const prompt = [
+      `Write ${n} multiple-choice questions for ${o.subject}, ${o.level}, on "${o.topic}", suitable for a computer-based test.`,
+      'Each has exactly four options, one correct answer (its index 0–3), and a one-sentence explanation. Mix easy, medium and harder questions. Vary which option is correct.',
+      questions.length ? `Do not repeat these questions:\n${questions.map((q) => `- ${q.question}`).join('\n')}` : '',
+      o.notes ? `Base them on this lesson note:\n${o.notes.slice(0, 2500)}` : '',
+    ]
+      .filter(Boolean)
+      .join('\n');
+    prompts.push(prompt);
+    const device = quizModel(n, InferenceMode.PREFER_ON_DEVICE);
+    let res: Awaited<ReturnType<GenerativeModel['generateContent']>>;
+    try {
+      res = await Promise.race([
+        device.generateContent(prompt),
+        new Promise<never>((_, reject) => setTimeout(() => reject(new Error('device-timeout')), QUIZ_DEVICE_LIMIT_MS)),
+      ]);
+    } catch (e) {
+      if ((e as Error).message !== 'device-timeout') throw e;
+      res = await quizModel(n, InferenceMode.ONLY_IN_CLOUD).generateContent(prompt);
+    }
+    if (res.response.inferenceSource === InferenceSource.IN_CLOUD) usedCloud = true;
+    else usedDevice = true;
+    const obj = JSON.parse(res.response.text().trim().replace(/^```(?:json)?|```$/g, '')) as { questions?: QuizQ[] };
+    const batch = (obj.questions ?? [])
+      .filter((q) => q.question && Array.isArray(q.options) && q.options.length >= 2)
+      .map((q) => ({ question: q.question, options: q.options.slice(0, 4), answer: Math.min(Math.max(0, Math.round(q.answer)), Math.min(3, q.options.length - 1)), explanation: q.explanation ?? '' }));
+    if (!batch.length) break;
+    questions.push(...batch.slice(0, n));
+    o.onProgress?.(questions.length, o.count);
+  }
+  // The stamp reflects where most of the work ran; the ledger shows exactly what was sent.
+  const source: Source = usedCloud && !usedDevice ? 'in_cloud' : 'on_device';
+  return { questions, source: usedCloud ? ('in_cloud' as Source) : source, prompt: prompts.join('\n\n---\n\n'), ms: performance.now() - t0 };
 }
 
 // ---------- Parent messages: one name-free template, translated per language, filled in locally ----------
@@ -562,7 +602,7 @@ export async function draftParentMessage(kind: 'absence' | 'fees' | 'results' | 
   const prompt = [
     `Write a short, warm, respectful text message from ${schoolName} to a parent in Nigeria, to ${purpose}.`,
     gist ? `The school’s note: ${gist.slice(0, 600)}` : '',
-    `Use these placeholders exactly as written, and no real names: ${allowed}.`,
+    `Use these placeholders exactly as written, and no real names: ${allowed}. [STUDENT] is the child's first name, so write "[STUDENT]" on its own, never "your [STUDENT]".`,
     'At most 60 words. Plain text, no emoji, no subject line. End with the school’s name.',
   ]
     .filter(Boolean)
@@ -937,7 +977,7 @@ export async function readRecordPage(
   const unsure = { type: 'array', items: { type: 'string' }, description: 'Names of fields you could not read clearly.' };
   const scoreProps = Object.fromEntries(ctx.columns.map((c) => [c.key, { type: 'number', description: `${c.label}, out of ${c.max}` }]));
   const studentProps: Record<string, object> = { name: { type: 'string' }, admissionNo: { type: 'string' }, unsure };
-  if (kind === 'class_list' || kind === 'bio_data') Object.assign(studentProps, { gender: { type: 'string', enum: ['male', 'female', ''] }, guardianName: { type: 'string' }, guardianPhone: { type: 'string' } });
+  if (kind === 'class_list' || kind === 'bio_data') Object.assign(studentProps, { gender: { type: 'string', enum: ['male', 'female', ''] }, guardianName: { type: 'string', description: 'The parent or guardian’s name, only if the page has one.' }, guardianPhone: { type: 'string', description: 'The phone number in this pupil’s row (a parent or guardian phone column), digits as written, e.g. 08031234567.' } });
   if (kind === 'bio_data') Object.assign(studentProps, { dob: { type: 'string', description: 'Date of birth as YYYY-MM-DD' } });
   if (kind === 'fee_ledger') Object.assign(studentProps, { balance: { type: 'number', description: 'Amount still owed in naira' } });
   if (kind === 'score_sheet') Object.assign(studentProps, { scores: { type: 'object', properties: scoreProps } });
@@ -964,11 +1004,18 @@ export async function readRecordPage(
     .join('\n');
   const read = await askPage(local, schema, [{ type: 'text', text: guide + shapeNote(local, schema) }, img]);
   const raw = parseJson<{ className?: string; subject?: string; students?: ImportedStudent[]; staff?: ImportedStaff[] }>(read.response.text());
-  const clean = (s: unknown) => (typeof s === 'string' ? s.trim() : '');
+  // Small models sometimes write "unspecified" or "N/A" instead of leaving a field out; treat those as empty.
+  const BLANK = /^(unspecified|not specified|unknown|n\/?a|none|null|nil|-+|\?+)$/i;
+  const clean = (s: unknown) => (typeof s === 'string' && !BLANK.test(s.trim()) ? s.trim() : '');
   const students = (raw.students ?? [])
     .filter((s) => clean(s.name))
     .map((s) => ({
       ...s,
+      admissionNo: clean(s.admissionNo) || undefined,
+      gender: clean(s.gender) || undefined,
+      dob: clean(s.dob) || undefined,
+      guardianName: clean(s.guardianName) || undefined,
+      guardianPhone: clean(s.guardianPhone) || undefined,
       name: clean(s.name).replace(/\s+/g, ' '),
       scores: s.scores ? Object.fromEntries(ctx.columns.filter((c) => typeof s.scores?.[c.key] === 'number').map((c) => [c.key, Math.min(c.max, Math.max(0, s.scores![c.key]))])) : undefined,
     }));

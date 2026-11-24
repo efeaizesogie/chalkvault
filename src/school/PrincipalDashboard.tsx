@@ -21,8 +21,9 @@ import { NoticeList, useNotices } from './NoticesPage';
 import type { WorkspaceCtx } from './Workspace';
 import '../modules/ask.css';
 
+// The facts for the brief are worked out in code (briefFacts); the model only puts them into words.
 const BRIEF_Q =
-  'Write this morning’s brief for the head of school: 3 to 5 short points. Say what changed since last term, what needs attention today (attendance gaps, missing scores, unpaid fees, students at risk) and one thing worth praising. Use the figures exactly.';
+  'Write this morning’s brief for the head of school as 4 or 5 short bullet points, using only the facts listed. Copy every number exactly as written; do not compare, add up or work out anything yourself. Cover what needs attention today and what changed since last term, and end with one thing worth praising.';
 
 /** The principal's and owner's dashboard: this term against the last, with an AI brief written from the same figures. */
 export function PrincipalDashboard({ greeting }: { greeting: (line: string, actions?: JSX.Element) => JSX.Element }) {
@@ -132,6 +133,44 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string, acti
     if (feeByArm.length) lines.push(`Fees by arm: ${feeByArm.map((f) => `${f.c.name} ${Math.round((f.paid / f.total) * 100)}% collected, ${f.owing} owing`).join('; ')}.`);
     return lines.join('\n\n');
   };
+  /**
+   * The facts for the morning brief, worked out here rather than left to the model: lowest arms, biggest changes,
+   * who needs attention. A short, labelled list is quick for Gemini Nano to read and leaves nothing to compare.
+   */
+  const briefFacts = () => {
+    if (!s) return '';
+    const p = (v: number) => `${Math.round(v * 10) / 10}%`;
+    const change = (now: number | null, then: number | null | undefined) => {
+      if (now === null || then === null || then === undefined) return '';
+      const d = Math.round((now - then) * 10) / 10;
+      return d === 0 ? ' (same as last term)' : ` (${d > 0 ? 'up' : 'down'} ${Math.abs(d)} points on last term)`;
+    };
+    const byValue = (r: Record<string, number>) => Object.entries(r).sort((a, b) => a[1] - b[1]);
+    const lowAtt = byValue(s.attendanceByArm).slice(0, 2).map(([id, v]) => `${armName(id)} ${p(v)}`);
+    const subj = byValue(s.subjectAverages);
+    const armUp = two && before
+      ? Object.entries(s.armAverages)
+          .map(([id, v]) => [id, v - (before.armAverages[id] ?? v)] as const)
+          .sort((a, b) => b[1] - a[1])[0]
+      : null;
+    const lowFees = [...feeByArm].sort((a, b) => a.paid / a.total - b.paid / b.total).slice(0, 2);
+    return [
+      `Today: registers taken in ${registersToday.size} of ${classes.length} arms${todayPct !== null ? `, ${p(todayPct)} present` : ''}.`,
+      s.attendancePct !== null ? `Attendance this term: ${p(s.attendancePct)}${change(s.attendancePct, two ? before?.attendancePct : undefined)}.` : '',
+      lowAtt.length ? `Lowest attendance: ${lowAtt.join(', ')}.` : '',
+      s.average !== null ? `Average score: ${p(s.average)}${change(s.average, two ? before?.average : undefined)}.` : '',
+      subj.length ? `Weakest subject: ${subj[0][0]} at ${p(subj[0][1])}. Strongest subject: ${subj[subj.length - 1][0]} at ${p(subj[subj.length - 1][1])}.` : '',
+      armUp && armUp[1] > 0 ? `Most improved arm: ${armName(armUp[0])}, average up ${Math.round(armUp[1] * 10) / 10} points on last term.` : '',
+      s.feesExpected ? `Fees: ${p((s.feesCollected / s.feesExpected) * 100)} collected (${naira(s.feesCollected)} of ${naira(s.feesExpected)}).` : 'Fees: no invoices yet this term.',
+      lowFees.length ? `Lowest fee collection: ${lowFees.map((f) => `${f.c.name} ${p((f.paid / f.total) * 100)}`).join(', ')}.` : '',
+      `Students needing attention: ${risks.length}.${risks.length ? ` Most urgent: ${risks.slice(0, 3).map((r) => `${r.name} in ${armName(r.classId)} (${r.reasons.join('; ')})`).join('; ')}.` : ''}`,
+      `Form comments waiting for approval: ${waiting.length}.`,
+      unstaffed || noForm ? `Staffing gaps: ${unstaffed} subjects without a teacher, ${noForm} arms without a form teacher.` : 'Staffing: every subject and arm has a teacher.',
+    ]
+      .filter(Boolean)
+      .join('\n');
+  };
+
   const explain = async (q: string) => {
     if (brief?.busy) return;
     setBrief({ q, a: '', busy: true });
@@ -139,7 +178,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string, acti
     try {
       const res = await askSchool({
         question: q,
-        brief: figures(),
+        brief: q === BRIEF_Q ? briefFacts() : figures(),
         names: active.map((x) => x.name),
         history: [],
         allowCloud: policy.cloudCommentFallback && ws.prefs.allowCloudFallback,

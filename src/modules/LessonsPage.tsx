@@ -31,7 +31,7 @@ export function LessonsPage() {
   const [topic, setTopic] = useState('');
   const [week, setWeek] = useState('');
   const [extra, setExtra] = useState('');
-  const [count, setCount] = useState(10);
+  const [count, setCount] = useState(5);
   const [notes, setNotes] = useState('');
   const [quiz, setQuiz] = useState<QuizQuestion[]>([]);
   const [noteSource, setNoteSource] = useState<'on_device' | 'in_cloud' | undefined>();
@@ -53,7 +53,7 @@ export function LessonsPage() {
       setNoteSource(res.source);
       await ws.log({ task: `Lesson note: ${subject}`, source: res.source, charsSent: res.source === 'in_cloud' ? res.prompt.length : 0, detail: res.source === 'in_cloud' ? `No student data.\n${res.prompt}` : 'Written by Gemini Nano on this device.' });
       setBusy('Writing quiz questions…');
-      const q = await writeQuiz({ subject, level, topic, notes: res.text, count });
+      const q = await writeQuiz({ subject, level, topic, notes: res.text, count, onProgress: (done, total) => setBusy(`Writing quiz questions… ${done} of ${total}`) });
       setQuiz(q.questions);
       setQuizSource(q.source);
       await ws.log({ task: `Quiz: ${subject}`, source: q.source, charsSent: q.source === 'in_cloud' ? q.prompt.length : 0, detail: q.source === 'in_cloud' ? `No student data.\n${q.prompt.slice(0, 800)}` : 'Written by Gemini Nano on this device.' });
