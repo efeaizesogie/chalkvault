@@ -245,7 +245,7 @@ function noteHtml(text: string) {
     }
     const bullet = line.match(/^[*•-]\s+(.*)$/);
     const num = line.match(/^\d+[.)]\s+(.*)$/);
-    const hashHead = line.match(/^#+\s*(.*)$/);
+    const hashHead = line.match(/^#+\s*(.*)$/) || line.match(/^\*\*([^*]+)\*\*:?$/);
     const colonHead = line.length < 60 && /:$/.test(line) ? line.replace(/:$/, '') : null;
     const shortHead = line.length < 40 && /^[A-Z][A-Za-z ,'’()/-]+$/.test(line) && !/[.!?]$/.test(line) ? line : null;
     const head = hashHead ? hashHead[1] : colonHead ?? shortHead;
@@ -272,7 +272,7 @@ function noteHtml(text: string) {
 export function lessonDoc(l: { subject: string; level: string; topic: string; week?: string; notes: string; quiz: { question: string; options: string[]; answer: number; explanation: string }[]; author?: string }) {
   const L = ['A', 'B', 'C', 'D'];
   const quiz = l.quiz.length
-    ? `<section class="quiz"><h2>Quiz: ${l.quiz.length} questions</h2><ol class="q-list">${l.quiz
+    ? `<section class="quiz"><h2>Quiz: ${l.quiz.length} question${l.quiz.length === 1 ? '' : 's'}</h2><ol class="q-list">${l.quiz
         .map((q) => `<li><p>${esc(q.question)}</p><ol class="opts">${q.options.map((o, i) => `<li><b>${L[i]}.</b> ${esc(o)}</li>`).join('')}</ol></li>`)
         .join('')}</ol></section>
       <section class="answer-key"><h2>Answer key</h2><table><thead><tr><th class="num">No.</th><th>Answer</th><th>Why</th></tr></thead><tbody>${l.quiz
