@@ -123,3 +123,8 @@
   .doc table.arms td { white-space: nowrap; }
   .doc i { font-style: normal; }
 }
+@media print {
+  /* Grouped tables share column widths, so every arm lines up. */
+  .doc table.grp { table-layout: fixed; }
+  .doc table.grp th:first-child { width: 28%; }
+}

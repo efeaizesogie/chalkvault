@@ -179,11 +179,11 @@ export function tableDoc(
   }
   const isNum = (v: unknown) => typeof v === 'number' || (/^[₦\d,.%\s-]+$/.test(String(v ?? '')) && /\d/.test(String(v ?? '')));
   const fmt = (v: unknown) => (typeof v === 'number' ? v.toLocaleString('en-NG') : esc(v));
-  const table = (head: Row, body: Row[], totals?: Row) => {
+  const table = (head: Row, body: Row[], totals?: Row, cls = '') => {
     const sample = body.length ? body : totals ? [totals.map((v, i) => (i === 0 ? 0 : v))] : [];
     const num = head.map((_, i) => sample.length > 0 && sample.every((r) => r[i] === '' || r[i] === null || r[i] === undefined || isNum(r[i])));
     const tr = (r: Row, cls = '') => `<tr${cls ? ` class="${cls}"` : ''}>${head.map((_, i) => `<td${num[i] ? ' class="num"' : ''}>${fmt(r[i])}</td>`).join('')}</tr>`;
-    return `<table><thead><tr>${head.map((h, i) => `<th${num[i] ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body.map((r) => tr(r)).join('')}${totals ? tr(totals, 'subtotal') : ''}</tbody></table>`;
+    return `<table${cls ? ` class="${cls}"` : ''}><thead><tr>${head.map((h, i) => `<th${num[i] ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body.map((r) => tr(r)).join('')}${totals ? tr(totals, 'subtotal') : ''}</tbody></table>`;
   };
   const sumRow = (head: Row, body: Row[], label: string) => {
     if (!opts.sum?.length) return undefined;
@@ -211,10 +211,10 @@ export function tableDoc(
       const h2 = pick(head);
       const parts = [...groups].map(([g, list]) => {
         const sub = sumRow(h2, list.map(pick), `${g} total`);
-        return `<section><h2>${esc(g || 'No arm')}</h2><p class="group-sum">${list.length} ${list.length === 1 ? 'entry' : 'entries'}</p>${table(h2, list.map(pick), sub)}</section>`;
+        return `<section><h2>${esc(g || 'No arm')}</h2><p class="group-sum">${list.length} ${list.length === 1 ? 'entry' : 'entries'}</p>${table(h2, list.map(pick), sub, 'grp')}</section>`;
       });
       const grand = sumRow(h2, rest.map(pick), 'All arms');
-      return parts.join('') + (grand ? `<section class="keep"><h2>All arms</h2>${table(h2, [], grand)}</section>` : '');
+      return parts.join('') + (grand ? `<section class="keep"><h2>All arms</h2>${table(h2, [], grand, 'grp')}</section>` : '');
     })
     .join('');
   return `<h1>${esc(title)}</h1>${opts.subtitle ? `<p class="doc-sub">${esc(opts.subtitle)}</p>` : ''}${opts.intro ?? ''}${body}`;
