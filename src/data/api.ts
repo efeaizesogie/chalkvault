@@ -283,8 +283,9 @@ export async function saveRecord(schoolId: string, by: string, r: Partial<TermRe
 
 // ---------- Attendance ----------
 export async function saveAttendance(schoolId: string, day: Omit<AttendanceDay, 'id' | 'updatedAt'>) {
-  const id = `${day.classId}_${day.date}`;
-  await setDoc(paths.attendanceDay(schoolId, day.classId, day.date), { ...day, id, updatedAt: now() } satisfies AttendanceDay);
+  const group = day.offeringId ?? day.classId;
+  const id = `${group}_${day.date}`;
+  await setDoc(paths.attendanceDay(schoolId, group, day.date), { ...day, id, updatedAt: now() } satisfies AttendanceDay);
 }
 export const todayISO = () => {
   const d = new Date();

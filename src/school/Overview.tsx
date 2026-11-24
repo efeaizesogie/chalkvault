@@ -1,158 +1,240 @@
-import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { query, where } from 'firebase/firestore';
-import { paths, saveClass } from '../data/api';
+import { paths, todayISO } from '../data/api';
 import { useQuery } from '../data/hooks';
-import { CLASS_COLOURS, SUPPORT_LABEL, type ClassRoom, type StudentProfile, type TermRecord } from '../data/types';
-import { AddClassDialog } from '../components/AddClassDialog';
-import { useToast } from '../ui/toast';
+import { CLASS_COLOURS, SUPPORT_LABEL, type AttendanceDay, type ClassRoom, type Offering, type StudentProfile, type SubjectRecord, type TermRecord } from '../data/types';
+import { rosterOf } from '../lib/reportCards';
 import { useSchool } from './SchoolContext';
+import { NoticeList, useNotices } from './NoticesPage';
 
 export function Overview() {
-  const { school, schoolId, me, isAdmin, myClasses, classes, members, term } = useSchool();
-  const [adding, setAdding] = useState(false);
-  const toast = useToast();
-  const first = (me.name || '').split(' ')[0];
+  const { isAdmin } = useSchool();
+  return isAdmin ? <AdminDashboard /> : <TeacherDashboard />;
+}
 
-  const steps = [
-    { done: classes.length > 0, label: 'Add your classes', to: null as string | null, action: () => setAdding(true) },
-    { done: members.length > 1, label: 'Invite your teachers', to: `/s/${schoolId}/staff`, action: null },
-    { done: false, label: 'Add students to a class', to: myClasses[0] ? `/s/${schoolId}/classes/${myClasses[0].id}` : null, action: null },
-  ];
+function Greeting({ line }: { line: string }) {
+  const { me, term } = useSchool();
+  const first = (me.name || '').split(' ')[0];
+  return (
+    <header className="page-head">
+      <div>
+        <h1 className="display-sm">Good to see you{first ? `, ${first}` : ''}.</h1>
+        <p className="lede">
+          {term ? `${term.name}${term.session ? `, ${term.session}` : ''}. ` : ''}
+          {line}
+        </p>
+      </div>
+    </header>
+  );
+}
+
+// ---------------- Admin ----------------
+
+function AdminDashboard() {
+  const { schoolId, school, classes, offerings, members, term } = useSchool();
+  const termId = term?.id ?? '';
+  const students = useQuery<StudentProfile>(paths.students(schoolId), `dash-st:${schoolId}`);
+  const today = useQuery<AttendanceDay>(query(paths.attendance(schoolId), where('date', '==', todayISO())), `dash-att:${todayISO()}`);
+  const subjectRecs = useQuery<SubjectRecord>(termId ? query(paths.subjectRecords(schoolId), where('termId', '==', termId)) : null, `dash-sr:${termId}`);
+  const formRecs = useQuery<TermRecord>(termId ? query(paths.records(schoolId), where('termId', '==', termId)) : null, `dash-rec:${termId}`);
+  const notices = useNotices();
+
+  const byClass = (id: string) => students.data.filter((s) => s.classId === id);
+  // Today's attendance: arms with a register (form) or any lesson register (subject) today.
+  const registersToday = new Set(today.data.map((d) => d.classId));
+  let present = 0;
+  let marked = 0;
+  for (const d of today.data) for (const m of Object.values(d.marks)) (marked++, m !== 'A' && present++);
+
+  // Score entry: how many (student, subject) pairs have any score this term.
+  let expected = 0;
+  for (const o of offerings) expected += rosterOf(o, byClass(o.classId)).length;
+  const entered = subjectRecs.data.filter((r) => Object.keys(r.scores ?? {}).length).length;
+  const unstaffed = offerings.filter((o) => !o.teacherIds.length).length;
+  const noForm = classes.filter((c) => !members.some((m) => m.classIds.includes(c.id))).length;
+  const comments = formRecs.data.filter((r) => r.final || r.draft).length;
+  const approved = formRecs.data.filter((r) => r.status === 'approved').length;
+  const waiting = formRecs.data.filter((r) => r.status === 'submitted');
+  const flagged = formRecs.data.filter((r) => r.draft?.supportFlag && r.draft.supportFlag !== 'none');
+  const names = new Map(students.data.map((s) => [s.id, s.name]));
 
   return (
     <div className="page">
-      <header className="page-head">
-        <div>
-          <h1 className="display-sm">Good to see you{first ? `, ${first}` : ''}.</h1>
-          <p className="lede">
-            {isAdmin
-              ? `${school.name} has ${classes.length} class${classes.length === 1 ? '' : 'es'} and ${members.length} staff member${members.length === 1 ? '' : 's'}.`
-              : `You teach ${myClasses.length} class${myClasses.length === 1 ? '' : 'es'} at ${school.name}.`}
-          </p>
-        </div>
-        {isAdmin && (
-          <button className="ticket" onClick={() => setAdding(true)}>
-            Add a class
-          </button>
-        )}
-      </header>
+      <Greeting line={`${school.name}: ${students.data.length} students in ${classes.length} arms, ${members.length} staff.`} />
 
-      {isAdmin && !school.demo && classes.length === 0 && (
+      <section className="stat-grid" aria-label="This term at a glance">
+        <Stat label="Attendance today" value={marked ? `${Math.round((present / marked) * 100)}%` : 'Not taken'} note={`${registersToday.size} of ${classes.length} arms have a register today`} to={`/s/${schoolId}/classes`} />
+        <Stat label="Scores entered" value={expected ? `${Math.round((entered / expected) * 100)}%` : '0%'} note={`${entered} of ${expected} subject scores this term`} to={`/s/${schoolId}/classes`} />
+        <Stat label="Form comments" value={`${comments} of ${students.data.length}`} note={`${approved} approved`} to={`/s/${schoolId}/results`} />
+        <Stat label="Gaps in staffing" value={`${unstaffed + noForm}`} note={`${unstaffed} subjects without a teacher, ${noForm} arms without a form teacher`} to={`/s/${schoolId}/staff`} />
+      </section>
+
+      {(classes.length === 0 || members.length < 2) && !school.demo && (
         <ol className="checklist">
-          {steps.map((s, i) => (
-            <li key={i} className={s.done ? 'done' : ''}>
-              <span className="mono">{String(i + 1).padStart(2, '0')}</span>
-              {s.to ? <Link to={s.to}>{s.label}</Link> : <button className="link" onClick={s.action ?? undefined}>{s.label}</button>}
-            </li>
-          ))}
+          <li className={classes.length ? 'done' : ''}>
+            <span className="mono">01</span>
+            <Link to={`/s/${schoolId}/settings`}>Set up classes, arms and subjects</Link>
+          </li>
+          <li className={members.length > 1 ? 'done' : ''}>
+            <span className="mono">02</span>
+            <Link to={`/s/${schoolId}/staff`}>Invite teachers and assign their subjects and form classes</Link>
+          </li>
+          <li className={students.data.length ? 'done' : ''}>
+            <span className="mono">03</span>
+            <Link to={`/s/${schoolId}/classes`}>Add students to each arm</Link>
+          </li>
         </ol>
       )}
 
-      {isAdmin && <ApprovalQueue />}
-      {isAdmin && <FollowUps />}
-
-      <section className="class-grid">
-        {myClasses.map((c) => (
-          <ClassCard key={c.id} schoolId={schoolId} cls={c} termId={term?.id ?? ''} />
-        ))}
-        {myClasses.length === 0 && (
-          <p className="muted">{isAdmin ? 'No classes yet. Add your first class to get started.' : 'Your head teacher hasn’t assigned you a class yet.'}</p>
+      <div className="record-grid">
+        {waiting.length > 0 && (
+          <section className="panel queue">
+            <h2 className="h3">
+              {waiting.length} comment{waiting.length === 1 ? '' : 's'} waiting for your approval
+            </h2>
+            <ul className="queue-list">
+              {[...new Set(waiting.map((r) => r.classId))].map((cid) => (
+                <li key={cid}>
+                  <Link to={`/s/${schoolId}/classes/${cid}`}>{classes.find((c) => c.id === cid)?.name ?? 'An arm'}</Link>
+                  <span>{waiting.filter((r) => r.classId === cid).length} waiting</span>
+                </li>
+              ))}
+            </ul>
+          </section>
         )}
-      </section>
-
-      {adding && (
-        <AddClassDialog
-          initial={null}
-          usedColours={classes.map((c) => c.colour)}
-          levels={school.levels}
-          subjects={school.subjects}
-          onSave={(c) =>
-            saveClass(schoolId, c)
-              .then(() => setAdding(false))
-              .catch((e) => toast((e as Error).message, 'error'))
-          }
-          onClose={() => setAdding(false)}
-        />
-      )}
+        {flagged.length > 0 && (
+          <section className="panel">
+            <h2 className="h3">
+              {flagged.length} student{flagged.length === 1 ? '' : 's'} may need follow-up
+            </h2>
+            <ul className="queue-list">
+              {flagged.map((r) => (
+                <li key={r.studentId}>
+                  <Link to={`/s/${schoolId}/students/${r.studentId}`}>{names.get(r.studentId) ?? 'Student'}</Link>
+                  <span className="muted">
+                    {classes.find((c) => c.id === r.classId)?.name}, {SUPPORT_LABEL[r.draft!.supportFlag!].toLowerCase()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+        <section className="panel">
+          <div className="panel-head">
+            <h2 className="h3">Notices</h2>
+            <Link className="link" to={`/s/${schoolId}/notices`}>
+              Post a notice
+            </Link>
+          </div>
+          <NoticeList notices={notices.data} limit={3} />
+        </section>
+        <section className="panel">
+          <h2 className="h3">Score entry by arm</h2>
+          <ul className="progress-list">
+            {classes.map((c) => {
+              const offs = offerings.filter((o) => o.classId === c.id);
+              let exp = 0;
+              for (const o of offs) exp += rosterOf(o, byClass(c.id)).length;
+              const got = subjectRecs.data.filter((r) => r.classId === c.id && Object.keys(r.scores ?? {}).length).length;
+              return (
+                <li key={c.id}>
+                  <Link to={`/s/${schoolId}/classes/${c.id}?tab=subjects`}>{c.name}</Link>
+                  <span className="bar" aria-hidden>
+                    <i style={{ transform: `scaleX(${exp ? got / exp : 0})`, background: CLASS_COLOURS[c.colour].bg }} />
+                  </span>
+                  <span className="muted small">{exp ? `${Math.round((got / exp) * 100)}%` : 'No students'}</span>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      </div>
     </div>
   );
 }
 
-/** Comments teachers have sent for approval this term, grouped by class. */
-function ApprovalQueue() {
-  const { schoolId, term, classes } = useSchool();
-  const waiting = useQuery<TermRecord>(
-    term ? query(paths.records(schoolId), where('termId', '==', term.id), where('status', '==', 'submitted')) : null,
-    `queue:${term?.id}`,
-  );
-  if (!waiting.data.length) return null;
-  const byClass = new Map<string, number>();
-  for (const r of waiting.data) byClass.set(r.classId, (byClass.get(r.classId) ?? 0) + 1);
+function Stat({ label, value, note, to }: { label: string; value: string; note: string; to: string }) {
   return (
-    <section className="panel queue">
-      <h2 className="h3">
-        {waiting.data.length} comment{waiting.data.length === 1 ? '' : 's'} waiting for your approval
-      </h2>
-      <ul className="queue-list">
-        {[...byClass].map(([cid, n]) => (
-          <li key={cid}>
-            <Link to={`/s/${schoolId}/classes/${cid}`}>{classes.find((c) => c.id === cid)?.name ?? 'A class'}</Link>
-            <span className="muted">{n} waiting</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <Link to={to} className="stat">
+      <span className="mono">{label}</span>
+      <b>{value}</b>
+      <span className="muted small">{note}</span>
+    </Link>
   );
 }
 
-/** Students whose latest comment was flagged for follow-up (classified on the teacher's device or in the cloud). */
-function FollowUps() {
-  const { schoolId, term, classes } = useSchool();
-  const recs = useQuery<TermRecord>(term ? query(paths.records(schoolId), where('termId', '==', term.id)) : null, `followups:${term?.id}`);
-  const students = useQuery<StudentProfile>(paths.students(schoolId), `followups-names:${schoolId}`);
-  const names = new Map(students.data.map((s) => [s.id, s.name]));
-  const flagged = recs.data.filter((r) => r.draft?.supportFlag && r.draft.supportFlag !== 'none');
-  if (!flagged.length) return null;
+// ---------------- Teacher ----------------
+
+function TeacherDashboard() {
+  const { formClasses, myOfferings, classes, policy } = useSchool();
+  const notices = useNotices();
+  const parts = [
+    formClasses.length ? `form teacher of ${formClasses.map((c) => c.name).join(' and ')}` : '',
+    myOfferings.length ? `${myOfferings.length} subject${myOfferings.length === 1 ? '' : 's'} to teach` : '',
+  ].filter(Boolean);
   return (
-    <section className="panel">
-      <h2 className="h3">
-        {flagged.length} student{flagged.length === 1 ? '' : 's'} may need follow-up
-      </h2>
-      <ul className="queue-list">
-        {flagged.map((r) => (
-          <li key={r.studentId}>
-            <Link to={`/s/${schoolId}/students/${r.studentId}`}>{names.get(r.studentId) ?? 'Student'}</Link>
-            <span className="muted">{classes.find((c) => c.id === r.classId)?.name}</span>
-            <span className="muted">{SUPPORT_LABEL[r.draft!.supportFlag!]}: {r.draft!.growthArea}</span>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <div className="page">
+      <Greeting line={parts.length ? `You are ${parts.join(', with ')}.` : 'Your head teacher hasn’t assigned you a class or subject yet.'} />
+      {formClasses.length > 0 && (
+        <section>
+          <h2 className="h3">{formClasses.length > 1 ? 'My form classes' : 'My form class'}</h2>
+          <div className="class-grid">
+            {formClasses.map((c) => (
+              <FormCard key={c.id} cls={c} registerToday={policy.attendanceBy === 'form'} />
+            ))}
+          </div>
+        </section>
+      )}
+      {myOfferings.length > 0 && (
+        <section>
+          <h2 className="h3">My subjects</h2>
+          <div className="class-grid">
+            {myOfferings.map((o) => (
+              <SubjectCard key={o.id} o={o} cls={classes.find((c) => c.id === o.classId)} />
+            ))}
+          </div>
+        </section>
+      )}
+      <section className="panel">
+        <h2 className="h3">Notices</h2>
+        <NoticeList notices={notices.data} limit={5} />
+      </section>
+    </div>
   );
 }
 
-function ClassCard({ schoolId, cls, termId }: { schoolId: string; cls: ClassRoom; termId: string }) {
+function FormCard({ cls, registerToday }: { cls: ClassRoom; registerToday: boolean }) {
+  const { schoolId, term } = useSchool();
   const col = CLASS_COLOURS[cls.colour];
-  const students = useQuery<StudentProfile>(query(paths.students(schoolId), where('classId', '==', cls.id)), `cc-s:${cls.id}`);
-  const records = useQuery<TermRecord>(
-    termId ? query(paths.records(schoolId), where('classId', '==', cls.id), where('termId', '==', termId)) : null,
-    `cc-r:${cls.id}:${termId}`,
-  );
-  const ids = new Set(students.data.map((s) => s.id));
-  const recs = records.data.filter((r) => ids.has(r.studentId));
-  const finals = recs.filter((r) => r.final).length;
-  const drafted = recs.filter((r) => r.draft).length;
-  const total = students.data.length;
+  const st = useQuery<StudentProfile>(query(paths.students(schoolId), where('classId', '==', cls.id)), `fc-st:${cls.id}`);
+  const recs = useQuery<TermRecord>(term ? query(paths.records(schoolId), where('classId', '==', cls.id), where('termId', '==', term.id)) : null, `fc-rec:${cls.id}:${term?.id}`);
+  const day = useQuery<AttendanceDay>(query(paths.attendance(schoolId), where('classId', '==', cls.id), where('date', '==', todayISO())), `fc-day:${cls.id}`);
+  const written = recs.data.filter((r) => r.final || r.draft).length;
+  const taken = day.data.some((d) => !d.offeringId);
   return (
-    <Link to={`/s/${schoolId}/classes/${cls.id}`} className="class-card" style={{ background: col.bg, color: col.ink }}>
-      <span className="mono">{cls.subject || cls.level}</span>
+    <Link to={`/s/${schoolId}/classes/${cls.id}${registerToday && !taken ? '?tab=register' : ''}`} className="class-card" style={{ background: col.bg, color: col.ink }}>
       <span className="class-card-name">{cls.name}</span>
-      <span className="class-card-meta mono">
-        {total} students, {drafted} drafted, {finals} final
+      <span className="small">{registerToday ? (taken ? 'Register taken today' : 'Take today’s register') : `${st.data.length} students`}</span>
+      <span className="class-card-meta">
+        {written} of {st.data.length} form comments written
       </span>
-      <span className="class-card-bar" aria-hidden>
-        <i style={{ transform: `scaleX(${total ? finals / total : 0})`, background: col.ink }} />
+    </Link>
+  );
+}
+
+function SubjectCard({ o, cls }: { o: Offering; cls?: ClassRoom }) {
+  const { schoolId, term } = useSchool();
+  const st = useQuery<StudentProfile>(cls ? query(paths.students(schoolId), where('classId', '==', cls.id)) : null, `sc-st:${cls?.id}`);
+  const recs = useQuery<SubjectRecord>(term ? query(paths.subjectRecords(schoolId), where('offeringId', '==', o.id), where('termId', '==', term.id)) : null, `sc-rec:${o.id}:${term?.id}`);
+  const roster = rosterOf(o, st.data);
+  const done = recs.data.filter((r) => Object.keys(r.scores ?? {}).length).length;
+  const col = cls ? CLASS_COLOURS[cls.colour] : CLASS_COLOURS.chalk;
+  return (
+    <Link to={`/s/${schoolId}/subjects/${o.id}`} className="class-card subject-card" style={{ borderTop: `8px solid ${col.bg}` }}>
+      <span className="class-card-name">{o.subject}</span>
+      <span className="small">{cls?.name}</span>
+      <span className="class-card-meta">
+        Scores for {done} of {roster.length} students
       </span>
     </Link>
   );

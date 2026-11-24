@@ -7,7 +7,8 @@ import { CLASS_COLOURS, type ClassRoom, type StudentProfile } from '../data/type
 import { useSchool } from './SchoolContext';
 
 export function StudentsPage() {
-  const { myClasses, isAdmin } = useSchool();
+  const { classes, isAdmin, me } = useSchool();
+  const myClasses = isAdmin ? classes : classes.filter((c) => me.classIds.includes(c.id) || (me.subjectClassIds ?? []).includes(c.id));
   const [q, setQ] = useState('');
   return (
     <div className="page">

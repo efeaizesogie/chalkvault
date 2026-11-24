@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { query, where } from 'firebase/firestore';
 import { paths, saveAttendance, todayISO } from '../data/api';
 import { useDoc, useQuery } from '../data/hooks';
-import { MARK_LABEL, type AttendanceDay, type ClassRoom, type Mark, type StudentProfile } from '../data/types';
+import { MARK_LABEL, type AttendanceDay, type ClassRoom, type Mark, type Offering, type StudentProfile } from '../data/types';
 import { readRegister, PrivacyBlock } from '../lib/ai';
 import { friendlyError } from '../lib/errors';
 import { SourceStamp } from '../components/SourceStamp';
@@ -13,11 +13,12 @@ import type { WorkspaceCtx } from './Workspace';
 const MARKS: Mark[] = ['P', 'L', 'A'];
 
 /** One-tap daily register for a class, with an on-device reader for photographed paper registers. */
-export function AttendanceView({ cls, students, ws }: { cls: ClassRoom; students: StudentProfile[]; ws: WorkspaceCtx }) {
+export function AttendanceView({ cls, students, ws, offering }: { cls: ClassRoom; students: StudentProfile[]; ws: WorkspaceCtx; offering?: Offering }) {
   const { schoolId, me, term } = useSchool();
   const toast = useToast();
   const [date, setDate] = useState(todayISO());
-  const saved = useDoc<AttendanceDay>(paths.attendanceDay(schoolId, cls.id, date), `att:${cls.id}:${date}`);
+  const groupId = offering?.id ?? cls.id;
+  const saved = useDoc<AttendanceDay>(paths.attendanceDay(schoolId, groupId, date), `att:${groupId}:${date}`);
   const [marks, setMarks] = useState<Record<string, Mark>>({});
   const [dirty, setDirty] = useState(false);
   const [reading, setReading] = useState(false);
@@ -35,8 +36,12 @@ export function AttendanceView({ cls, students, ws }: { cls: ClassRoom; students
 
   // Term totals for the summary column.
   const termDays = useQuery<AttendanceDay>(
-    term ? query(paths.attendance(schoolId), where('classId', '==', cls.id), where('termId', '==', term.id)) : null,
-    `attTerm:${cls.id}:${term?.id}`,
+    term
+      ? offering
+        ? query(paths.attendance(schoolId), where('offeringId', '==', offering.id), where('termId', '==', term.id))
+        : query(paths.attendance(schoolId), where('classId', '==', cls.id), where('termId', '==', term.id))
+      : null,
+    `attTerm:${groupId}:${term?.id}`,
   );
   const totals = useMemo(() => {
     const t = new Map<string, { present: number; days: number }>();
@@ -64,7 +69,7 @@ export function AttendanceView({ cls, students, ws }: { cls: ClassRoom; students
   const save = async () => {
     if (!term) return;
     try {
-      await saveAttendance(schoolId, { classId: cls.id, termId: term.id, date, marks, takenBy: me.uid });
+      await saveAttendance(schoolId, { classId: cls.id, ...(offering ? { offeringId: offering.id } : {}), termId: term.id, date, marks, takenBy: me.uid });
       setDirty(false);
       toast(`Register saved for ${new Date(date + 'T12:00').toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' })}.`);
     } catch (e) {

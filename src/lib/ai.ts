@@ -360,6 +360,104 @@ export function prepareOutbound(comment: string, name: string, roster: string[])
 
 export const LANGUAGES = ['Yoruba', 'Hausa', 'Igbo', 'Spanish', 'French', 'Portuguese', 'Arabic', 'Mandarin Chinese', 'Haitian Creole', 'Vietnamese'];
 
+// ---------- Score sheets: scan a photo, or map a CBT export's columns ----------
+
+export interface ScannedRow {
+  name: string;
+  scores: Record<string, number>;
+}
+
+/**
+ * Read a photographed score sheet into the school's own columns.
+ * On-device (ONLY_ON_DEVICE) by default, because a score sheet shows names. The cloud is used only
+ * when the school's admin has switched on cloud scanning, and the ledger records that names were sent.
+ */
+export async function readScoreSheet(
+  image: { base64: string; mimeType: 'image/jpeg' | 'image/png' },
+  roster: string[],
+  columns: { key: string; label: string; max: number }[],
+  allowCloud: boolean,
+) {
+  const local = (await deviceStatus()) === 'available';
+  if (!local && !allowCloud) {
+    throw new PrivacyBlock('Reading a score sheet needs Gemini Nano on this computer, because the sheet shows students’ names. An admin can allow cloud reading in Settings.');
+  }
+  const schema = {
+    type: 'object',
+    properties: {
+      rows: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string' },
+            ...Object.fromEntries(columns.map((c) => [c.key, { type: 'number', description: `${c.label}, out of ${c.max}` }])),
+          },
+          required: ['name'],
+        },
+      },
+    },
+    required: ['rows'],
+  };
+  const prompt = [
+    'This is a photo of a teacher’s handwritten or printed score sheet.',
+    `Columns to read: ${columns.map((c) => `${c.key} = "${c.label}" (out of ${c.max})`).join('; ')}.`,
+    'Students on the class list:',
+    ...roster.map((n, i) => `${i + 1}. ${n}`),
+    'For each student you can find on the sheet, return their name exactly as written in the class list and each score as a number. Leave out a score you cannot read. Do not guess.',
+  ].join('\n');
+  const m = getGenerativeModel(ai(), local
+    ? { mode: InferenceMode.ONLY_ON_DEVICE, onDeviceParams: { createOptions, promptOptions: { responseConstraint: schema } } }
+    : { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { responseMimeType: 'application/json', temperature: 0 } } });
+  const t0 = performance.now();
+  const res = await m.generateContent([
+    { type: 'text', text: prompt },
+    { type: 'inlineData', inlineData: { data: image.base64, mimeType: image.mimeType } },
+  ]);
+  const raw = JSON.parse(res.response.text().trim().replace(/^```(?:json)?|```$/g, '')) as { rows?: Record<string, unknown>[] };
+  const rows: ScannedRow[] = (raw.rows ?? []).map((r) => ({
+    name: String(r.name ?? ''),
+    scores: Object.fromEntries(columns.filter((c) => typeof r[c.key] === 'number').map((c) => [c.key, Math.min(c.max, Math.max(0, r[c.key] as number))])),
+  }));
+  return { rows, source: (local ? 'on_device' : 'in_cloud') as Source, ms: performance.now() - t0 };
+}
+
+/**
+ * Match a CBT export's column headers to the school's score-sheet columns. Only the header row is sent,
+ * never a student's row, so this is safe whichever way PREFER_ON_DEVICE routes it.
+ */
+export async function mapColumns(headers: string[], columns: { key: string; label: string; max: number }[]) {
+  const schema = {
+    type: 'object',
+    properties: {
+      nameColumn: { type: 'string', description: 'Header holding the student name, or empty.' },
+      idColumn: { type: 'string', description: 'Header holding the admission or registration number, or empty.' },
+      ...Object.fromEntries(columns.map((c) => [c.key, { type: 'string', description: `Header for "${c.label}", or empty.` }])),
+    },
+    required: ['nameColumn', 'idColumn', ...columns.map((c) => c.key)],
+  };
+  const m = getGenerativeModel(ai(), {
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] }, promptOptions: { responseConstraint: schema } },
+    inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { responseMimeType: 'application/json', temperature: 0 } },
+  });
+  const prompt = [
+    'A school exported results from a computer-based test (CBT) system. These are the column headers:',
+    headers.map((h) => `"${h}"`).join(', '),
+    `The school's score sheet has these columns: ${columns.map((c) => `${c.key} = "${c.label}" (out of ${c.max})`).join('; ')}.`,
+    'Return JSON giving, for each score-sheet column key, the exact header that holds it (or "" if none), plus nameColumn and idColumn.',
+  ].join('\n');
+  const res = await m.generateContent(prompt);
+  const obj = JSON.parse(res.response.text().trim().replace(/^```(?:json)?|```$/g, '')) as Record<string, string>;
+  const pick = (h: string | undefined) => (h && headers.includes(h) ? h : '');
+  return {
+    nameColumn: pick(obj.nameColumn),
+    idColumn: pick(obj.idColumn),
+    map: Object.fromEntries(columns.map((c) => [c.key, pick(obj[c.key])])) as Record<string, string>,
+    source: (res.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device') as Source,
+  };
+}
+
 // ---------- Short remarks (subject teacher, principal): hybrid, never given a name ----------
 
 let remarkModel: GenerativeModel | null = null;

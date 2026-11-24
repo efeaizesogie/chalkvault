@@ -6,6 +6,8 @@ import { useDoc, useQuery } from '../data/hooks';
 import type { Guardian, Pronoun, StudentProfile, TermRecord } from '../data/types';
 import { LANGUAGES } from '../lib/ai';
 import { useToast } from '../ui/toast';
+import { useArm } from './useArm';
+import { ReportCardView } from '../components/ReportCardView';
 import { whatsappLink } from '../lib/share';
 import { useSchool } from './SchoolContext';
 
@@ -13,7 +15,7 @@ const blankGuardian: Guardian = { name: '', relationship: '', phone: '', email: 
 
 export function StudentRecord() {
   const { studentId = '' } = useParams();
-  const { schoolId, school, classes, myClasses, isAdmin, terms } = useSchool();
+  const { schoolId, school, classes, myClasses, isAdmin, terms, me, policy } = useSchool();
   const toast = useToast();
   const nav = useNavigate();
   const live = useDoc<StudentProfile>(paths.student(schoolId, studentId), `stu:${studentId}`);
@@ -25,9 +27,12 @@ export function StudentRecord() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [live.data]);
 
+  const formView = !!live.data && (isAdmin || me.classIds.includes(live.data.classId));
+  const arm = useArm(live.data?.classId ?? '', formView);
+  const card = arm.cards.get(studentId);
   const records = useQuery<TermRecord>(
-    live.data ? query(paths.records(schoolId), where('studentId', '==', studentId), where('classId', '==', live.data.classId)) : null,
-    `recs:${studentId}:${live.data?.classId}`,
+    live.data && formView ? query(paths.records(schoolId), where('studentId', '==', studentId), where('classId', '==', live.data.classId)) : null,
+    `recs:${studentId}:${live.data?.classId}:${formView}`,
   );
 
   if (live.loading) return <div className="ws-empty muted">Loading record…</div>;
@@ -36,6 +41,7 @@ export function StudentRecord() {
   const cls = classes.find((c) => c.id === p.classId);
   const set = (patch: Partial<StudentProfile>) => setP({ ...p, ...patch });
   const setG = (i: number, patch: Partial<Guardian>) => set({ guardians: p.guardians.map((g, j) => (j === i ? { ...g, ...patch } : g)) });
+  const canEdit = isAdmin || (me.classIds.includes(p.classId) && policy.teachersManageStudents);
   const save = async () => {
     try {
       await saveStudent(schoolId, p);
@@ -61,8 +67,8 @@ export function StudentRecord() {
           <button className="pill ghost" onClick={() => window.print()}>
             Print report
           </button>
-          <button className="ticket" onClick={save} disabled={!dirty}>
-            {dirty ? 'Save changes' : 'Saved'}
+          <button className="ticket" onClick={save} disabled={!dirty || !canEdit} title={canEdit ? undefined : 'Only admins or the form teacher can edit this record'}>
+            {!canEdit ? 'View only' : dirty ? 'Save changes' : 'Saved'}
           </button>
         </div>
       </header>
@@ -151,6 +157,14 @@ export function StudentRecord() {
           ))}
         </section>
 
+        {card && (
+          <section className="panel wide">
+            <h2 className="h3">This term’s report card</h2>
+            <ReportCardView card={card} schoolName={school.name} schoolAddress={school.address} motto={school.motto} principalName={school.principalName} studentName={p.name} admissionNo={p.admissionNo} />
+            {p.resultPin && <p className="muted small">Result PIN for parents: <b className="pin">{p.resultPin}</b></p>}
+          </section>
+        )}
+
         <section className="panel wide">
           <h2 className="h3">Reports by term</h2>
           {sorted.length === 0 && <p className="muted small">No notes or comments yet. Open the class to write this term’s comment.</p>}
@@ -195,6 +209,7 @@ export function StudentRecord() {
           )}
         </section>
 
+        {canEdit && (
         <section className="panel wide danger-zone">
           <button
             className="link danger"
@@ -207,6 +222,7 @@ export function StudentRecord() {
             Delete this student record
           </button>
         </section>
+        )}
       </div>
 
       <div className="print-only report-card">
