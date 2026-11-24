@@ -330,6 +330,8 @@ export interface PublishedResult {
   studentName: string;
   admissionNo: string;
   reports: Record<string, ReportCard>;
+  /** Fees still owed when results were last published, if the school uses Chalkvault fees. */
+  fees?: { termName: string; total: number; paid: number; balance: number; asOf: number };
   updatedAt: number;
 }
 

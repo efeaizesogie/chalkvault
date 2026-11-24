@@ -1,9 +1,9 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { arrayUnion, query, updateDoc, where } from 'firebase/firestore';
-import { newPin, paths, publishResult, readResult, saveStudent } from '../data/api';
+import { arrayUnion, getDoc, query, updateDoc, where } from 'firebase/firestore';
+import { modDoc, newPin, paths, publishResult, readResult, saveStudent } from '../data/api';
 import { useQuery } from '../data/hooks';
-import { CLASS_COLOURS, type ClassRoom, type ReportCard, type StudentProfile } from '../data/types';
+import { CLASS_COLOURS, type ClassRoom, type Invoice, type ReportCard, type StudentProfile } from '../data/types';
 import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
@@ -28,6 +28,7 @@ export function PublishButton({ classId, students, cards, blocked }: { classId: 
           await saveStudent(schoolId, { ...s, resultPin: pin });
         }
         const existing = await readResult(pin).catch(() => null);
+        const inv = (await getDoc(modDoc(schoolId, 'invoices', `${term.id}_${s.id}`)).catch(() => null))?.data() as Invoice | undefined;
         await publishResult({
           pin,
           schoolId,
@@ -36,6 +37,7 @@ export function PublishButton({ classId, students, cards, blocked }: { classId: 
           studentName: s.name,
           admissionNo: s.admissionNo,
           reports: { ...(existing?.reports ?? {}), [term.id]: { ...card, publishedAt: Date.now() } },
+          ...(inv ? { fees: { termName: term.name, total: inv.total, paid: inv.paid, balance: inv.balance, asOf: Date.now() } } : {}),
           updatedAt: Date.now(),
         });
         n++;

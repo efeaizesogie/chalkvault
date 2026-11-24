@@ -60,6 +60,28 @@ export function Portal() {
           </div>
         </header>
         <main className="portal-main">
+          {card && (card.attendance || result.fees) && (
+            <section className="portal-summary" aria-label="Summary">
+              {card.attendance && (
+                <div>
+                  <span className="mono">Attendance, {card.termName.toLowerCase()}</span>
+                  <b>{Math.round((card.attendance.present / card.attendance.days) * 100)}%</b>
+                  <span className="muted small">
+                    Present on {card.attendance.present} of {card.attendance.days} school days
+                  </span>
+                </div>
+              )}
+              {result.fees && (
+                <div>
+                  <span className="mono">Fees, {result.fees.termName.toLowerCase()}</span>
+                  <b>{result.fees.balance > 0 ? `₦${Math.round(result.fees.balance).toLocaleString('en-NG')} owed` : 'Paid in full'}</b>
+                  <span className="muted small">
+                    ₦{Math.round(result.fees.paid).toLocaleString('en-NG')} paid of ₦{Math.round(result.fees.total).toLocaleString('en-NG')}, as of {new Date(result.fees.asOf).toLocaleDateString()}. Ask the school’s bursar about any payment made since.
+                  </span>
+                </div>
+              )}
+            </section>
+          )}
           {card ? (
             <ReportCardView card={card} schoolName={result.schoolName} schoolAddress={result.schoolAddress} studentName={result.studentName} admissionNo={result.admissionNo} />
           ) : (
