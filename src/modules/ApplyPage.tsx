@@ -4,6 +4,8 @@ import { saveIn } from '../data/api';
 import type { Application } from '../data/types';
 import { friendlyError } from '../lib/errors';
 import { AuthShell } from '../pages/AuthShell';
+import { SuggestInput } from '../components/Pickers';
+import { levelGroups } from '../school/catalog';
 import './admissions.css';
 
 const LANGUAGE_OPTIONS = ['English', 'Yoruba', 'Hausa', 'Igbo', 'French', 'Arabic', 'Other'];
@@ -108,7 +110,7 @@ export function ApplyPage() {
           </label>
           <label className="field">
             <span className="mono">Class applying for</span>
-            <input value={form.level} onChange={(e) => set({ level: e.target.value })} placeholder="e.g. JSS 1 or Primary 3" />
+            <SuggestInput value={form.level} onChange={(v) => set({ level: v })} groups={levelGroups('Nigeria')} placeholder="e.g. JSS 1 or Primary 3" label="Class applying for" />
           </label>
           <label className="field">
             <span className="mono">Previous school</span>

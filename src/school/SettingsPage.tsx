@@ -10,6 +10,8 @@ import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
 import { SessionTools } from './SessionTools';
 import { TermPanel } from './TermPanel';
+import { ARM_GROUPS, levelGroups, subjectGroups } from './catalog';
+import { ChipPicker, SuggestInput } from '../components/Pickers';
 
 export function SettingsPage() {
   const { school, schoolId, classes, offerings, members, me, policy } = useSchool();
@@ -139,8 +141,8 @@ export function SettingsPage() {
           </div>
           <label className="field">
             <span className="mono">Subjects that need a credit, separated by commas</span>
-            <input value={rules.creditSubjects.join(', ')} onChange={(e) => rule('creditSubjects', e.target.value.split(',').map((x) => x.trim()).filter(Boolean))} placeholder="English Language, Mathematics" />
           </label>
+          <ChipPicker label="Subjects that need a credit" value={rules.creditSubjects} onChange={(v) => rule('creditSubjects', v)} groups={[{ label: 'Your subjects', items: school.subjects }]} placeholder="Search your subjects" />
         </section>
 
         <section className="panel">
@@ -187,11 +189,13 @@ export function SettingsPage() {
                       </button>
                     ))}
                     <span className="arm-add">
-                      <input
+                      <SuggestInput
                         value={addingArm[level] ?? ''}
-                        onChange={(e) => setAddingArm((x) => ({ ...x, [level]: e.target.value }))}
+                        onChange={(v) => setAddingArm((x) => ({ ...x, [level]: v }))}
+                        groups={ARM_GROUPS}
+                        exclude={arms.map((c) => c.arm ?? '')}
                         placeholder={school.arms?.[arms.length] ?? String.fromCharCode(65 + arms.length)}
-                        aria-label={`New arm for ${level}`}
+                        label={`New arm for ${level}`}
                       />
                       <button
                         className="link"
@@ -209,10 +213,10 @@ export function SettingsPage() {
               );
             })}
           </div>
-          <label className="field">
-            <span className="mono">Class levels, one per line</span>
-            <textarea className="ruled" rows={4} value={levels} onChange={(e) => setLevels(e.target.value)} />
-          </label>
+          <div className="field">
+            <span className="mono">Class levels the school runs (save settings to apply)</span>
+            <ChipPicker label="Class levels" value={lines(levels)} onChange={(v) => setLevels(v.join('\n'))} groups={levelGroups(country)} ordered placeholder="Search levels, or type your own" />
+          </div>
         </section>
 
         <section className="panel">
@@ -230,7 +234,7 @@ export function SettingsPage() {
             ))}
           </ul>
           <div className="inline-add">
-            <input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="e.g. Further Mathematics" />
+            <SuggestInput value={newSubject} onChange={setNewSubject} groups={subjectGroups(country)} exclude={school.subjects} placeholder="Pick or type a subject, e.g. Physics" label="New subject" onEnter={addSubject} />
             <button className="pill ink" onClick={addSubject} disabled={!newSubject.trim()}>
               Add subject
             </button>

@@ -3,11 +3,11 @@ import { Navigate, useNavigate } from 'react-router-dom';
 import { displayName, useAuth } from '../auth/AuthProvider';
 import { createSchool } from '../data/api';
 import { COUNTRIES, COUNTRY_PRESETS } from '../school/presets';
+import { ARM_GROUPS, levelGroups, subjectGroups } from '../school/catalog';
+import { ChipPicker } from '../components/Pickers';
 import { useToast } from '../ui/toast';
 import { AuthShell } from './AuthShell';
 import type { SchoolPolicy } from '../data/types';
-
-const armNames = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
 type Step = 0 | 1 | 2;
 
@@ -20,8 +20,8 @@ export function Start() {
   const [country, setCountry] = useState('Nigeria');
   const [term, setTerm] = useState(COUNTRY_PRESETS.Nigeria.term);
   const [levels, setLevels] = useState<string[]>(COUNTRY_PRESETS.Nigeria.levels);
-  const [subjects, setSubjects] = useState<string>(COUNTRY_PRESETS.Nigeria.subjects.join('\n'));
-  const [arms, setArms] = useState('A, B');
+  const [subjects, setSubjects] = useState<string[]>(COUNTRY_PRESETS.Nigeria.subjects);
+  const [armList, setArmList] = useState<string[]>(['A', 'B']);
   const [attendanceBy, setAttendanceBy] = useState<SchoolPolicy['attendanceBy']>('form');
   const [formPer, setFormPer] = useState<SchoolPolicy['formClassesPerTeacher']>('one');
   const [busy, setBusy] = useState(false);
@@ -34,15 +34,12 @@ export function Start() {
     const p = COUNTRY_PRESETS[c];
     setTerm(p.term);
     setLevels(p.levels);
-    setSubjects(p.subjects.join('\n'));
+    setSubjects(p.subjects);
   };
-
-  const lines = (s: string) => s.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
 
   const finish = async () => {
     setBusy(true);
     try {
-      const armList = armNames(arms);
       const classList = levels.flatMap((level) => armList.map((arm) => ({ name: `${level}${arm.length <= 2 ? '' : ' '}${arm}`, level, arm, subject: '' })));
       const id = await createSchool(
         { uid: user.uid, name: displayName(user), email: user.email ?? '' },
@@ -52,7 +49,7 @@ export function Start() {
           termName: term.trim() || 'Term 1',
           levels,
           arms: armList,
-          subjects: lines(subjects),
+          subjects,
           classes: classList,
           policy: { attendanceBy, formClassesPerTeacher: formPer },
         },
@@ -95,41 +92,27 @@ export function Start() {
               <input value={term} onChange={(e) => setTerm(e.target.value)} />
             </label>
             <div className="field">
-              <span className="mono">Class levels</span>
-              <div className="chips">
-                {COUNTRY_PRESETS[country].levels.map((l) => {
-                  const on = levels.includes(l);
-                  return (
-                    <button
-                      key={l}
-                      type="button"
-                      className={`chip ${on ? 'on' : ''}`}
-                      onClick={() => setLevels(on ? levels.filter((x) => x !== l) : COUNTRY_PRESETS[country].levels.filter((x) => x === l || levels.includes(x)))}
-                    >
-                      {l}
-                    </button>
-                  );
-                })}
-              </div>
+              <span className="mono">Class levels you run ({levels.length})</span>
+              <ChipPicker label="Class levels" value={levels} onChange={setLevels} groups={levelGroups(country)} ordered placeholder="Search levels, or type your own (e.g. Year 7)" />
             </div>
-            <label className="field">
-              <span className="mono">Subjects, one per line</span>
-              <textarea className="ruled" rows={6} value={subjects} onChange={(e) => setSubjects(e.target.value)} />
-            </label>
+            <div className="field">
+              <span className="mono">Subjects you teach ({subjects.length})</span>
+              <ChipPicker label="Subjects" value={subjects} onChange={setSubjects} groups={subjectGroups(country)} placeholder="Search subjects, e.g. Physics, or type your own" />
+            </div>
           </>
         )}
 
         {step === 2 && (
           <>
-            <label className="field">
-              <span className="mono">Arms in each class, separated by commas</span>
-              <input value={arms} onChange={(e) => setArms(e.target.value)} placeholder="A, B, C or Gold, Diamond" autoFocus />
+            <div className="field">
+              <span className="mono">Arms in each class ({armList.length})</span>
+              <ChipPicker label="Arms" value={armList} onChange={setArmList} groups={ARM_GROUPS} placeholder="Search arm names, or type your own" />
               <small className="muted">
-                Creates {levels.length * armNames(arms).length} arms, such as {levels[0] ?? 'JSS 1'}
-                {armNames(arms)[0] ?? 'A'} and {levels[0] ?? 'JSS 1'}
-                {armNames(arms)[1] ?? 'B'}, each with all {lines(subjects).length} subjects. You can add or remove arms later.
+                Creates {levels.length * armList.length} arms, such as {levels[0] ?? 'JSS 1'}
+                {armList[0] ?? 'A'}
+                {armList[1] ? ` and ${levels[0] ?? 'JSS 1'}${armList[1].length <= 2 ? '' : ' '}${armList[1]}` : ''}, each with all {subjects.length} subjects. You can add or remove arms later.
               </small>
-            </label>
+            </div>
             <label className="field">
               <span className="mono">Who takes attendance</span>
               <select value={attendanceBy} onChange={(e) => setAttendanceBy(e.target.value as SchoolPolicy['attendanceBy'])}>
@@ -157,11 +140,11 @@ export function Start() {
           )}
           <span className="spacer" />
           {step < 2 ? (
-            <button className="ticket" disabled={step === 0 && !name.trim()} onClick={() => setStep((step + 1) as Step)}>
+            <button className="ticket" disabled={(step === 0 && !name.trim()) || (step === 1 && (!levels.length || !subjects.length))} onClick={() => setStep((step + 1) as Step)}>
               Continue
             </button>
           ) : (
-            <button className="ticket" onClick={finish} disabled={busy}>
+            <button className="ticket" onClick={finish} disabled={busy || !armList.length}>
               {busy ? 'Setting up…' : 'Open my school'}
             </button>
           )}

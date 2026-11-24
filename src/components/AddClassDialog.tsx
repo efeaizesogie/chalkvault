@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { CLASS_COLOURS, type ClassColour, type ClassRoom } from '../data/types';
 import { uid } from '../data/api';
+import { SuggestInput } from './Pickers';
 
 export function AddClassDialog(props: {
   initial: ClassRoom | null;
@@ -50,12 +51,7 @@ export function AddClassDialog(props: {
           </label>
           <label className="field">
             <span className="mono">Subject (optional)</span>
-            <input list="cv-subjects" value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="Form class, or a subject" />
-            <datalist id="cv-subjects">
-              {props.subjects.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
+            <SuggestInput value={subject} onChange={setSubject} groups={[{ label: 'Your subjects', items: props.subjects }]} placeholder="Form class, or a subject" label="Subject" />
           </label>
         </div>
         <fieldset className="field">

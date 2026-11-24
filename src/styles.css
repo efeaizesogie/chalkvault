@@ -41,6 +41,13 @@ body {
 button, input, textarea, select { font: inherit; color: inherit; }
 button { cursor: pointer; background: none; border: 0; padding: 0; }
 button:disabled { cursor: not-allowed; opacity: 0.45; }
+/* Every form control looks like the app's own, even where a screen forgot a class. Zero specificity, so any
+   screen's own rule still wins. */
+:where(input:not([type='checkbox'], [type='radio'], [type='file'], [type='range'], [type='color']), select, textarea) {
+  border: 1px solid var(--ink); background-color: var(--sheet); border-radius: 12px; padding: 7px 12px; min-height: 36px; max-width: 100%;
+}
+:where(input, select, textarea):focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+:where(input[type='checkbox'], input[type='radio']) { accent-color: var(--ink); width: 18px; height: 18px; }
 :focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
 
 /* Labels: the body face, a step smaller, sentence case, untracked. (Class name kept so markup stays put.) */
