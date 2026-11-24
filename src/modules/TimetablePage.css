@@ -1,0 +1,143 @@
+/* Timetable module. Colours come only from the shared CSS variables. */
+
+.tt-modes {
+  margin: 20px 0 12px;
+}
+.tt-pick {
+  max-width: 320px;
+  margin-bottom: 20px;
+}
+.tt-group-label {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--ink-2);
+}
+.tt-add-row {
+  margin-top: 10px;
+}
+.tt-perweek .field input {
+  width: 100%;
+}
+
+.tt-list {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  color: var(--ink-2);
+}
+.tt-list li {
+  line-height: 1.4;
+}
+
+/* The week grid. Kept separate from .gradebook so it still prints. */
+.tt-scroll {
+  overflow-x: auto;
+}
+.tt-grid {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  background: var(--sheet);
+}
+.tt-grid th,
+.tt-grid td {
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  text-align: left;
+  vertical-align: top;
+}
+.tt-grid thead th {
+  border-bottom: 1px solid var(--ink);
+  font-weight: 500;
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.tt-grid .tt-time {
+  white-space: nowrap;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
+  width: 1%;
+}
+.tt-plabel {
+  display: block;
+  font-weight: 500;
+}
+.tt-prange {
+  display: block;
+  color: var(--muted);
+  font-size: 11px;
+}
+.tt-grid tr.tt-break td,
+.tt-grid tr.tt-break th {
+  background: var(--paper-2);
+  color: var(--muted);
+}
+.tt-grid tr.tt-break td {
+  text-align: center;
+}
+.tt-cell-subject {
+  display: block;
+  font-weight: 500;
+}
+.tt-cell-teacher {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 2px;
+}
+.tt-empty-cell {
+  color: var(--muted);
+}
+
+/* Settings periods table: let the inputs breathe. */
+.tt-grid.tt-settings input[type='text'],
+.tt-grid.tt-settings input:not([type]) {
+  width: 100%;
+}
+.tt-grid.tt-settings input[type='time'] {
+  width: 110px;
+}
+.tt-grid.tt-settings input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--ink);
+}
+
+.tt-print-title {
+  display: none;
+  font: 400 20px var(--serif);
+  margin: 0 0 12px;
+}
+
+@media (max-width: 480px) {
+  .tt-pick {
+    max-width: none;
+  }
+}
+
+/* Print just the grid: hide the app chrome and everything marked no-print. */
+@media print {
+  body.tt-printing .masthead,
+  body.tt-printing .side,
+  body.tt-printing .demo-banner,
+  body.tt-printing .tt-noprint {
+    display: none !important;
+  }
+  body.tt-printing .shell {
+    display: block;
+  }
+  body.tt-printing .ws-main {
+    padding: 0;
+  }
+  body.tt-printing .tt-print-title {
+    display: block;
+  }
+  body.tt-printing .tt-grid {
+    font-size: 11px;
+  }
+  body.tt-printing .tt-grid th,
+  body.tt-printing .tt-grid td {
+    border-color: var(--print-rule);
+  }
+}
