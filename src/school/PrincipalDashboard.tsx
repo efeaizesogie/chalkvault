@@ -62,6 +62,9 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
 
   // Weeks lined up by their place in the term (week 1, week 2...), so two terms can share one axis.
   const weeks = Math.max(s?.weeklyAttendance.length ?? 0, two ? before?.weeklyAttendance.length ?? 0 : 0);
+  // The axis starts a little under the lowest week (never above 70%), so dips are visible without exaggerating them.
+  const lowestWeek = Math.min(100, ...[...(s?.weeklyAttendance ?? []), ...(two ? before?.weeklyAttendance ?? [] : [])].map((w) => w.pct));
+  const weekFloor = Math.max(0, Math.min(70, Math.floor((lowestWeek - 5) / 10) * 10));
   const weekPoints = Array.from({ length: weeks }, (_, i) => ({ label: `Wk ${i + 1}`, values: pair(s?.weeklyAttendance[i]?.pct, before?.weeklyAttendance[i]?.pct) }));
   const subjects = [...new Set([...Object.keys(s?.subjectAverages ?? {}), ...(two ? Object.keys(before?.subjectAverages ?? {}) : [])])].sort((a, b) => (s?.subjectAverages[a] ?? 0) - (s?.subjectAverages[b] ?? 0));
   const grades = Object.keys(s?.grades ?? before?.grades ?? {});
@@ -211,7 +214,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
           action={<ExplainBtn q="Explain the week by week attendance: which weeks dipped, which arms caused it, and what to check." />}
           table={{ head: ['Week', ...series.map((x) => x.name)], rows: weekPoints.map((p) => [p.label, ...p.values.map((v) => (v === null ? '' : `${v}%`))]) }}
         >
-          <LineChart points={weekPoints} series={series} floor={50} height={Math.min(380, Math.max(220, peopled.length * 28))} />
+          <LineChart points={weekPoints} series={series} floor={weekFloor} height={Math.min(380, Math.max(220, peopled.length * 28))} />
         </ChartCard>
 
         <ChartCard
@@ -274,7 +277,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
 
         <ChartCard
           title="Staff progress"
-          note={`Scores entered and form comments written, by arm. ${unstaffed} subjects have no teacher and ${noForm} arms have no form teacher.`}
+          note={`Scores entered and form comments written, by arm. ${unstaffed || noForm ? `${unstaffed} subjects have no teacher and ${noForm} arms have no form teacher.` : "Every subject and every arm has a teacher."}`}
           series={[
             { name: 'Scores entered', tone: 'now' },
             { name: 'Form comments', tone: 'before' },

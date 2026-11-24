@@ -125,7 +125,7 @@ export function Demo() {
           const uidX = `demo-staff-${i}`;
           for (const o of offeringIds) teach.set(o, [...(teach.get(o) ?? []), uidX]);
           const subjectClassIds = [...new Set(offerings.filter((o) => offeringIds.includes(o.id)).map((o) => o.classId))];
-          staff.set(paths.member(schoolId, uidX), { uid: uidX, name, email: '', role, classIds, offeringIds, subjectClassIds, joinedAt: Date.now() } satisfies Member);
+          staff.set(paths.member(schoolId, uidX), { uid: uidX, name, email: `${name.split(' ').slice(1).join('.').toLowerCase()}@greenfield.example`, role, classIds, offeringIds, subjectClassIds, joinedAt: Date.now() } satisfies Member);
         };
         DEMO_STAFF.primary.forEach((name, i) => primary[i] && member(i, name, 'teacher', [primary[i].id], offerings.filter((o) => o.classId === primary[i].id).map((o) => o.id)));
         DEMO_STAFF.jss.forEach((t, i) => member(10 + i, t.name, 'teacher', jss[i] ? [jss[i].id] : [], t.subject ? offerings.filter((o) => o.subject === t.subject && jss.some((c) => c.id === o.classId)).map((o) => o.id) : []));
@@ -143,7 +143,7 @@ export function Demo() {
           const lines = items.filter((it) => !it.levels.length || it.levels.includes(level)).map((it) => ({ name: it.name, amount: it.amount }));
           const total = lines.reduce((n, l) => n + l.amount, 0);
           const roll = r();
-          const paid = roll < 0.55 ? total : roll < 0.82 ? Math.round((total * (0.3 + r() * 0.4)) / 500) * 500 : 0;
+          const paid = roll < 0.64 ? total : roll < 0.9 ? Math.round((total * (0.3 + r() * 0.4)) / 500) * 500 : 0;
           const inv: Invoice = { id: `${termId}_${s.id}`, termId, studentId: s.id, classId: s.classId, lines, discounts: [], arrears: 0, total, paid, balance: total - paid, optionalIds: [], updatedAt: Date.now() };
           b.set(modDoc(schoolId, 'invoices', inv.id), inv);
           if (paid) {
