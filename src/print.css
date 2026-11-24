@@ -115,3 +115,7 @@
   .doc table.tt td.free { color: var(--print-ink-2); background: var(--sheet); }
   .doc table.tt tr.brk td, .doc table.tt tr.brk th { height: auto; background: var(--paper); text-align: center; color: var(--print-ink-2); padding: 3px; }
 }
+@media print {
+  .doc table.arms td { white-space: nowrap; }
+  .doc i { font-style: normal; }
+}

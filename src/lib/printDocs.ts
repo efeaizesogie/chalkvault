@@ -11,7 +11,7 @@ const bar = (v: number | null | undefined) => (v === null || v === undefined ? '
 function delta(now: number | null | undefined, before: number | null | undefined, unit = ' pts', better: 'up' | 'down' = 'up') {
   if (now === null || now === undefined || before === null || before === undefined) return '';
   const d = Math.round((now - before) * 10) / 10;
-  if (!d) return '<i>Same as last term</i>';
+  if (!d) return '<i>No change</i>';
   const good = better === 'up' ? d > 0 : d < 0;
   return `<i class="${good ? 'up' : 'down'}">${d > 0 ? 'Up' : 'Down'} ${Math.abs(d)}${unit}</i>`;
 }
@@ -24,7 +24,7 @@ function spark(now: (number | null)[], before: (number | null)[]) {
   const lo = Math.max(0, Math.floor((Math.min(...all) - 5) / 10) * 10);
   const W = 600;
   const H = 90;
-  const pad = { l: 30, r: 6, t: 6, b: 16 };
+  const pad = { l: 30, r: 22, t: 6, b: 16 };
   const x = (i: number) => pad.l + (n === 1 ? (W - pad.l - pad.r) / 2 : (i / (n - 1)) * (W - pad.l - pad.r));
   const y = (v: number) => pad.t + (1 - (v - lo) / (100 - lo)) * (H - pad.t - pad.b);
   const line = (vals: (number | null)[]) =>
@@ -83,7 +83,7 @@ export function overviewDoc(x: OverviewDocInput) {
   </section>
   <section>
     <h2>Each arm</h2>
-    <table>
+    <table class="arms">
       <thead><tr><th>Arm</th><th class="num">Students</th><th>Attendance</th><th class="num">Change</th><th>Average</th><th class="num">Change</th><th class="num">Scores in</th><th class="num">Comments</th><th class="num">Fees paid</th><th class="num">Owing</th></tr></thead>
       <tbody>${x.arms
         .map(
