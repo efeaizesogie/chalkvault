@@ -27,6 +27,15 @@ Chalkvault is now a multi-school records system. Each school registers its own p
 
 The research behind these choices is in [RESEARCH.md](RESEARCH.md).
 
+### v4: day to day, term to term, year to year ([REPORT-production.md](REPORT-production.md))
+- **Bring in your records:** photograph class lists, score sheets, fee ledgers and staff lists, handwritten or typed, or drop in Excel and CSV. Gemini Nano first sorts each page (enum output), then reads it into JSON shaped for that kind of page, **on-device only** (`ONLY_ON_DEVICE`), one page at a time. A review screen merges pages, matches arms, spots children already on the roll and highlights fields that were hard to read. Nothing is saved until the admin says so.
+- **Principal's dashboard:** attendance week by week and by arm, subject and arm averages, grade spread, students by level, fees by arm, staff progress, and students who need attention, each against last term. Every chart has a table view.
+- **Morning brief and "Explain this":** a short streamed read of where the school stands, written from the dashboard's own figures by Gemini Nano on the device, or in the cloud with every name coded first.
+- **Terms and sessions:** dates and status for each term, a switcher to look back at any term, a close-term checklist that saves the term's figures, and closed terms locked by the security rules.
+- **Third term:** cumulative results on the report card and a school-set promotion rule (pass mark plus credits in named subjects) that flags students to repeat.
+- **Parents' portal:** attendance and fee balance beside the report card.
+- **Guided setup** for schools starting from scratch.
+
 ### v3: the rest of a school system ([FEATURES-GAP.md](FEATURES-GAP.md))
 - **Ask Chalkvault:** staff ask questions about attendance, results, fees and follow-ups.
   - Figures are compiled in the browser.

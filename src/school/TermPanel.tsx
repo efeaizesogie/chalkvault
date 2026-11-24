@@ -109,7 +109,7 @@ export function TermPanel() {
         <input value={newTerm} onChange={(e) => setNewTerm(e.target.value)} placeholder="e.g. Second term" aria-label="New term name" />
         <input value={newSession} onChange={(e) => setNewSession(e.target.value)} placeholder="Session, e.g. 2026/2027" aria-label="Session" />
         <button className="pill" onClick={startTerm} disabled={!newTerm.trim()}>
-          Start term without closing
+          Start a term
         </button>
       </div>
     </section>

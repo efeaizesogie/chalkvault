@@ -403,6 +403,6 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .h4 { font: 600 16px/1.35 var(--sans); margin: 0; }
 .check { display: inline-flex; gap: 8px; align-items: center; }
 .portal-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; margin-bottom: 20px; }
-.portal-summary > div { display: grid; gap: 4px; padding: 16px 18px; border: 1px solid var(--ink); border-radius: 16px; background: var(--sheet); }
+.portal-summary > div { display: grid; gap: 4px; padding: 16px 20px; border: 1px solid var(--ink); border-radius: 16px; background: var(--sheet); }
 .portal-summary b { font: 400 30px/1.1 var(--serif); }
 @media print { .portal-summary { display: none; } }
