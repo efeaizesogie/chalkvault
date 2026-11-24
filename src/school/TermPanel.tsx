@@ -43,7 +43,7 @@ export function TermPanel() {
   };
 
   return (
-    <section className="panel">
+    <section className="panel" id="set-terms">
       <div className="panel-head">
         <h2 className="h3">Terms and sessions</h2>
         {currentTerm && currentTerm.status !== 'closed' && !closing && (

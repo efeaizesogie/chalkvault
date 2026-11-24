@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addArm, addSubjectEverywhere, deleteClass, deleteOffering, deleteSchool, saveClass, updateSchool } from '../data/api';
 import { CLASS_COLOURS, COLOUR_KEYS, type ClassRoom, type SchoolPolicy } from '../data/types';
@@ -104,8 +104,10 @@ export function SettingsPage() {
         </button>
       </header>
 
-      <div className="record-grid">
-        <section className="panel">
+      <div className="settings-layout">
+        <SettingsNav />
+        <div className="settings-stack">
+        <section className="panel" id="set-rules">
           <h2 className="h3">How your school runs</h2>
           <label className="field">
             <span className="mono">Who takes attendance</span>
@@ -140,12 +142,12 @@ export function SettingsPage() {
             </label>
           </div>
           <label className="field">
-            <span className="mono">Subjects that need a credit, separated by commas</span>
+            <span className="mono">Subjects that need a credit</span>
           </label>
           <ChipPicker label="Subjects that need a credit" value={rules.creditSubjects} onChange={(v) => rule('creditSubjects', v)} groups={[{ label: 'Your subjects', items: school.subjects }]} placeholder="Search your subjects" />
         </section>
 
-        <section className="panel">
+        <section className="panel" id="set-details">
           <h2 className="h3">School details</h2>
           <label className="field">
             <span className="mono">Name</span>
@@ -173,7 +175,7 @@ export function SettingsPage() {
           </label>
         </section>
 
-        <section className="panel wide">
+        <section className="panel wide" id="set-classes">
           <h2 className="h3">Classes and arms</h2>
           <div className="arm-grid">
             {levelList.map((level, li) => {
@@ -219,7 +221,7 @@ export function SettingsPage() {
           </div>
         </section>
 
-        <section className="panel">
+        <section className="panel" id="set-subjects">
           <h2 className="h3">Subjects</h2>
           <p className="muted small">Each subject is taught in every arm unless you remove it from an arm on the class page.</p>
           <ul className="settings-classes">
@@ -243,7 +245,7 @@ export function SettingsPage() {
 
         <TermPanel />
 
-        <section className="panel">
+        <section className="panel" id="set-grades">
           <h2 className="h3">Score sheet and grades</h2>
           <label className="field">
             <span className="mono">Score sheet columns: name, maximum score (one per line)</span>
@@ -261,7 +263,7 @@ export function SettingsPage() {
 
         <SessionTools />
 
-        <section className="panel wide danger-zone">
+        <section className="panel wide danger-zone" id="set-data">
           <h2 className="h3">Your data</h2>
           <p className="muted small">
             Records are stored in this school’s private space in Firebase. Only staff you invite can open them, and each teacher sees only their own arms and
@@ -286,6 +288,7 @@ export function SettingsPage() {
             </button>
           )}
         </section>
+        </div>
       </div>
 
       {editing && (
@@ -310,5 +313,45 @@ export function SettingsPage() {
         />
       )}
     </div>
+  );
+}
+
+const SECTIONS: [string, string][] = [
+  ['set-rules', 'How your school runs'],
+  ['set-details', 'School details'],
+  ['set-classes', 'Classes and arms'],
+  ['set-subjects', 'Subjects'],
+  ['set-terms', 'Terms and sessions'],
+  ['set-grades', 'Score sheet and grades'],
+  ['set-session', 'Promotion'],
+  ['set-export', 'Export'],
+  ['set-data', 'Your data'],
+];
+
+/** The list of settings sections, sticky beside them, marking the one in view. */
+function SettingsNav() {
+  const [on, setOn] = useState(SECTIONS[0][0]);
+  useEffect(() => {
+    const io = new IntersectionObserver(
+      (entries) => {
+        const seen = entries.filter((e) => e.isIntersecting).sort((a, b) => a.boundingClientRect.top - b.boundingClientRect.top)[0];
+        if (seen) setOn(seen.target.id);
+      },
+      { rootMargin: '-120px 0px -55% 0px' },
+    );
+    for (const [id] of SECTIONS) {
+      const el = document.getElementById(id);
+      if (el) io.observe(el);
+    }
+    return () => io.disconnect();
+  }, []);
+  return (
+    <nav className="settings-nav" aria-label="Settings sections">
+      {SECTIONS.map(([id, label]) => (
+        <a key={id} href={`#${id}`} className={on === id ? 'on' : ''} aria-current={on === id ? 'true' : undefined} onClick={(e) => (e.preventDefault(), document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), setOn(id))}>
+          {label}
+        </a>
+      ))}
+    </nav>
   );
 }

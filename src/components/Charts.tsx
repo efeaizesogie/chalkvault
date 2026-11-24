@@ -11,10 +11,10 @@ export interface Series {
 type Tip = { x: number; y: number; title: string; lines: { s: Series; v: string }[] } | null;
 
 /** Frame for a chart: title, legend when there are two series, and a table view of the same figures. */
-export function ChartCard({ title, note, series, table, children, action }: { title: string; note?: string; series: Series[]; table: { head: string[]; rows: (string | number)[][] }; children: ReactNode; action?: ReactNode }) {
+export function ChartCard({ title, note, series, table, children, action, wide }: { title: string; note?: string; series: Series[]; table: { head: string[]; rows: (string | number)[][] }; children: ReactNode; action?: ReactNode; wide?: boolean }) {
   const [asTable, setAsTable] = useState(false);
   return (
-    <section className="panel chart-card">
+    <section className={`panel chart-card${wide ? ' wide' : ''}`}>
       <div className="panel-head">
         <h2 className="h3">{title}</h2>
         <div className="chart-tools">

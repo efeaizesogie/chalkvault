@@ -92,9 +92,15 @@ export interface NewSchool {
   session?: string;
   policy?: Partial<SchoolPolicy>;
   demo?: boolean;
+  demoVersion?: number;
 }
 
 export async function createSchool(user: { uid: string; name: string; email: string }, s: NewSchool) {
+  return (await createSchoolFull(user, s)).schoolId;
+}
+
+/** Creates a school and returns what it wrote, so callers don't need to read it back. */
+export async function createSchoolFull(user: { uid: string; name: string; email: string }, s: NewSchool) {
   const schoolId = uid();
   const termId = uid();
   const colours = ['chalk', 'cobalt', 'vermilion', 'moss', 'lilac', 'teal'] as const;
@@ -112,36 +118,43 @@ export async function createSchool(user: { uid: string; name: string; email: str
     createdAt: now(),
     policy: { ...DEFAULT_POLICY, ...(s.policy ?? {}) },
     ...(s.demo ? { demo: true } : {}),
+    ...(s.demoVersion ? { demoVersion: s.demoVersion } : {}),
   };
   await setDoc(paths.school(schoolId), school);
   // 2) The owner's membership (rules allow it because the caller owns the school).
   const member: Member = { uid: user.uid, name: user.name, email: user.email, role: 'owner', classIds: [], joinedAt: now() };
   await setDoc(paths.member(schoolId, user.uid), member);
-  // 3) Everything else, now that the caller is a member.
-  const b = writeBatch(getDb());
-  b.set(paths.term(schoolId, termId), { id: termId, name: s.termName, order: 1, session: s.session ?? defaultSession() } satisfies Term);
-  await b.commit();
-  // Arms and their subject offerings, in batches under Firestore's 500-write limit.
+  // 3) Everything else, now that the caller is a member: the term, arms and their subject offerings,
+  //    in batches under Firestore's 500-write limit, all sent at once.
+  const term: Term = { id: termId, name: s.termName, order: 1, session: s.session ?? defaultSession() };
+  const classes: ClassRoom[] = [];
+  const offerings: Offering[] = [];
+  const commits: Promise<void>[] = [];
   let batch = writeBatch(getDb());
-  let n = 0;
-  const flush = async () => {
-    if (n) await batch.commit();
+  batch.set(paths.term(schoolId, termId), term);
+  let n = 1;
+  const flush = () => {
+    if (n) commits.push(batch.commit());
     batch = writeBatch(getDb());
     n = 0;
   };
   for (const [i, c] of s.classes.entries()) {
     const id = uid();
-    batch.set(paths.class(schoolId, id), { id, ...c, colour: colours[i % colours.length], createdAt: now() + i } satisfies ClassRoom);
+    const cls: ClassRoom = { id, ...c, colour: colours[i % colours.length], createdAt: now() + i };
+    classes.push(cls);
+    batch.set(paths.class(schoolId, id), cls);
     n++;
     for (const subject of s.subjects) {
       const oid = uid();
-      batch.set(paths.offering(schoolId, oid), { id: oid, classId: id, subject, teacherIds: [], studentIds: null, createdAt: now() } satisfies Offering);
-      if (++n >= 450) await flush();
+      const o: Offering = { id: oid, classId: id, subject, teacherIds: [], studentIds: null, createdAt: now() };
+      offerings.push(o);
+      batch.set(paths.offering(schoolId, oid), o);
+      if (++n >= 450) flush();
     }
   }
-  await flush();
-  await rememberSchool(user.uid, schoolId, s.name, 'owner');
-  return schoolId;
+  flush();
+  await Promise.all([...commits, rememberSchool(user.uid, schoolId, s.name, 'owner')]);
+  return { schoolId, school, term, classes, offerings };
 }
 
 export async function updateSchool(schoolId: string, patch: Partial<Omit<School, 'id' | 'ownerId'>>) {

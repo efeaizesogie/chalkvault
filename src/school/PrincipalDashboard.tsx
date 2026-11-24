@@ -206,8 +206,10 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
 
       {!school.demo && <SetupChecklist students={active.length} hasInvoices={now.invoices.length > 0} />}
 
-      <div className="dash-lead">
+      {/* Planned rows: cards in a row share one height, so nothing leaves a hole. */}
+      <div className="dash-grid">
         <ChartCard
+          wide
           title="Attendance week by week"
           note={two ? 'Each week of this term against the same week of last term.' : 'Share of students marked present or late each week.'}
           series={series}
@@ -224,19 +226,6 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
         >
           <BarRows max={100} series={series} rows={peopled.map((c) => ({ label: c.name, to: `/s/${schoolId}/classes/${c.id}?tab=register`, values: pair(s?.attendanceByArm[c.id], before?.attendanceByArm[c.id]) }))} />
         </ChartCard>
-      </div>
-
-      <div className="dash-flow">
-
-        <ChartCard
-          title="Subject averages"
-          note="Weakest first. Average of every student’s total in that subject, across all arms."
-          series={series}
-          action={<ExplainBtn q="Explain the subject averages: which subjects are weakest, how they compare with last term, and in which arms." />}
-          table={{ head: ['Subject', ...series.map((x) => x.name)], rows: subjects.map((x) => [x, ...pair(s?.subjectAverages[x], before?.subjectAverages[x]).map((v) => (v === null ? '' : `${v}%`))]) }}
-        >
-          <BarRows max={100} series={series} rows={subjects.map((x) => ({ label: x, values: pair(s?.subjectAverages[x], before?.subjectAverages[x]) }))} />
-        </ChartCard>
 
         <ChartCard
           title="Arm averages"
@@ -244,35 +233,6 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
           table={{ head: ['Arm', ...series.map((x) => x.name)], rows: peopled.map((c) => [c.name, ...pair(s?.armAverages[c.id], before?.armAverages[c.id]).map((v) => (v === null ? '' : `${v}%`))]) }}
         >
           <BarRows max={100} series={series} rows={peopled.map((c) => ({ label: c.name, to: `/s/${schoolId}/classes/${c.id}?tab=cards`, values: pair(s?.armAverages[c.id], before?.armAverages[c.id]) }))} />
-        </ChartCard>
-
-        <ChartCard
-          title="Grade spread"
-          note="Subject grades given so far, using the school’s grade bands."
-          series={series}
-          table={{ head: ['Grade', ...series.map((x) => x.name)], rows: grades.map((g) => [g, ...pair(s?.grades[g], before?.grades[g]).map((v) => v ?? '')]) }}
-        >
-          <Columns series={series} cats={grades.map((g) => ({ label: g, values: pair(s?.grades[g] ?? 0, before?.grades[g] ?? 0) }))} />
-        </ChartCard>
-
-        <ChartCard
-          title="Students by level"
-          series={series}
-          table={{ head: ['Level', ...series.map((x) => x.name)], rows: levels.map((l) => [l, ...pair(s?.byLevel[l], before?.byLevel[l]).map((v) => v ?? '')]) }}
-        >
-          <BarRows unit="" series={series} rows={levels.map((l) => ({ label: l, values: pair(s?.byLevel[l] ?? 0, before?.byLevel[l] ?? 0) }))} />
-        </ChartCard>
-
-        <RiskPanel risks={risks} armName={armName} explain={explain} busy={!!brief?.busy} />
-
-        <ChartCard
-          title="Fees collected by arm"
-          note={feeByArm.length ? `${feeByArm.reduce((n, f) => n + f.owing, 0)} children still owe.` : undefined}
-          series={[series[0]]}
-          action={feeByArm.length ? <ExplainBtn q="Explain fee collection: which arms are furthest behind and what to do this week." /> : undefined}
-          table={{ head: ['Arm', 'Collected', 'Expected', 'Share', 'Owing'], rows: feeByArm.map((f) => [f.c.name, naira(f.paid), naira(f.total), `${Math.round((f.paid / f.total) * 100)}%`, f.owing]) }}
-        >
-          {feeByArm.length ? <BarRows max={100} series={[series[0]]} rows={feeByArm.map((f) => ({ label: f.c.name, to: `/s/${schoolId}/fees`, values: [pct(f.paid, f.total)] }))} /> : <p className="muted small">No invoices this term. Bursars raise them under Fees.</p>}
         </ChartCard>
 
         <ChartCard
@@ -294,6 +254,45 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
           />
         </ChartCard>
 
+        <ChartCard
+          title="Fees collected by arm"
+          note={feeByArm.length ? `${feeByArm.reduce((n, f) => n + f.owing, 0)} children still owe.` : undefined}
+          series={[series[0]]}
+          action={feeByArm.length ? <ExplainBtn q="Explain fee collection: which arms are furthest behind and what to do this week." /> : undefined}
+          table={{ head: ['Arm', 'Collected', 'Expected', 'Share', 'Owing'], rows: feeByArm.map((f) => [f.c.name, naira(f.paid), naira(f.total), `${Math.round((f.paid / f.total) * 100)}%`, f.owing]) }}
+        >
+          {feeByArm.length ? <BarRows max={100} series={[series[0]]} rows={feeByArm.map((f) => ({ label: f.c.name, to: `/s/${schoolId}/fees`, values: [pct(f.paid, f.total)] }))} /> : <p className="muted small">No invoices this term. Bursars raise them under Fees.</p>}
+        </ChartCard>
+
+        <ChartCard
+          title="Subject averages"
+          note="Weakest first. Average of every student’s total in that subject, across all arms."
+          series={series}
+          action={<ExplainBtn q="Explain the subject averages: which subjects are weakest, how they compare with last term, and in which arms." />}
+          table={{ head: ['Subject', ...series.map((x) => x.name)], rows: subjects.map((x) => [x, ...pair(s?.subjectAverages[x], before?.subjectAverages[x]).map((v) => (v === null ? '' : `${v}%`))]) }}
+        >
+          <BarRows max={100} series={series} rows={subjects.map((x) => ({ label: x, values: pair(s?.subjectAverages[x], before?.subjectAverages[x]) }))} />
+        </ChartCard>
+
+        <ChartCard
+          title="Students by level"
+          series={series}
+          table={{ head: ['Level', ...series.map((x) => x.name)], rows: levels.map((l) => [l, ...pair(s?.byLevel[l], before?.byLevel[l]).map((v) => v ?? '')]) }}
+        >
+          <BarRows unit="" series={series} rows={levels.map((l) => ({ label: l, values: pair(s?.byLevel[l] ?? 0, before?.byLevel[l] ?? 0) }))} />
+        </ChartCard>
+
+        <ChartCard
+          title="Grade spread"
+          note="Subject grades given so far, using the school’s grade bands."
+          series={series}
+          table={{ head: ['Grade', ...series.map((x) => x.name)], rows: grades.map((g) => [g, ...pair(s?.grades[g], before?.grades[g]).map((v) => v ?? '')]) }}
+        >
+          <Columns series={series} cats={grades.map((g) => ({ label: g, values: pair(s?.grades[g] ?? 0, before?.grades[g] ?? 0) }))} />
+        </ChartCard>
+
+        <RiskPanel risks={risks} armName={armName} explain={explain} busy={!!brief?.busy} flagged={flagged.map((r) => ({ studentId: r.studentId, name: names.get(r.studentId) ?? 'Student', classId: r.classId, label: SUPPORT_LABEL[r.draft!.supportFlag!].toLowerCase() }))} />
+
         {waiting.length > 0 && (
           <section className="panel queue">
             <h2 className="h3">
@@ -309,24 +308,8 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
             </ul>
           </section>
         )}
-        {flagged.length > 0 && (
-          <section className="panel">
-            <h2 className="h3">
-              {flagged.length} student{flagged.length === 1 ? '' : 's'} flagged by form teachers
-            </h2>
-            <ul className="queue-list">
-              {flagged.map((r) => (
-                <li key={r.studentId}>
-                  <Link to={`/s/${schoolId}/students/${r.studentId}`}>{names.get(r.studentId) ?? 'Student'}</Link>
-                  <span className="muted">
-                    {armName(r.classId)}, {SUPPORT_LABEL[r.draft!.supportFlag!].toLowerCase()}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </section>
-        )}
-        <section className="panel">
+
+        <section className={`panel${waiting.length ? '' : ' wide'}`}>
           <div className="panel-head">
             <h2 className="h3">Notices</h2>
             <Link className="link" to={`/s/${schoolId}/notices`}>
@@ -335,6 +318,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
           </div>
           <NoticeList notices={notices.data} limit={3} />
         </section>
+
       </div>
 
       {history.length > 1 && (
@@ -355,6 +339,8 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
               { name: 'Attendance', tone: 'now' },
               { name: 'Average score', tone: 'before' },
             ]}
+            floor={Math.max(0, Math.min(70, Math.floor((Math.min(100, ...history.flatMap((h) => [h.attendancePct ?? 100, h.average ?? 100])) - 5) / 10) * 10))}
+            height={180}
             points={history.map((h) => ({ label: `${h.termName.replace(/ term$/i, '')}${h.session ? ` ${h.session.slice(2, 4)}/${h.session.slice(-2)}` : ''}`, values: [h.attendancePct, h.average] }))}
           />
         </ChartCard>
@@ -363,10 +349,10 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
   );
 }
 
-function RiskPanel({ risks, armName, explain, busy }: { risks: StudentRisk[]; armName: (id: string) => string; explain: (q: string) => void; busy: boolean }) {
+function RiskPanel({ risks, armName, explain, busy, flagged }: { risks: StudentRisk[]; armName: (id: string) => string; explain: (q: string) => void; busy: boolean; flagged: { studentId: string; name: string; classId: string; label: string }[] }) {
   const { schoolId } = useSchool();
   const [all, setAll] = useState(false);
-  const shown = all ? risks : risks.slice(0, 8);
+  const shown = all ? risks : risks.slice(0, 5);
   return (
     <section className="panel">
       <div className="panel-head">
@@ -391,10 +377,25 @@ function RiskPanel({ risks, armName, explain, busy }: { risks: StudentRisk[]; ar
       ) : (
         <p className="muted small">Students show here when their average falls under 50%, they score under 40% in two subjects, or their attendance drops under 80%.</p>
       )}
-      {risks.length > 8 && (
+      {risks.length > 5 && (
         <button className="link small" onClick={() => setAll((v) => !v)}>
           {all ? 'Show fewer' : `Show all ${risks.length}`}
         </button>
+      )}
+      {flagged.length > 0 && (
+        <>
+          <h3 className="h4">Flagged by form teachers ({flagged.length})</h3>
+          <ul className="queue-list">
+            {flagged.map((r) => (
+              <li key={r.studentId}>
+                <Link to={`/s/${schoolId}/students/${r.studentId}`}>{r.name}</Link>
+                <span className="muted small">
+                  {armName(r.classId)}, {r.label}
+                </span>
+              </li>
+            ))}
+          </ul>
+        </>
       )}
     </section>
   );

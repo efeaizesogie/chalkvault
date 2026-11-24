@@ -1,25 +1,27 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getDoc, getDocs, writeBatch, type DocumentReference } from 'firebase/firestore';
+import { getDoc, writeBatch, type DocumentReference } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
-import { addNotice, blankStudent, createSchool, deleteSchool, getUserSchools, modDoc, newPin, paths, updateSchool } from '../data/api';
+import { addNotice, blankStudent, createSchoolFull, deleteSchool, getUserSchools, modDoc, newPin, paths } from '../data/api';
 import { seedDemoHistory } from './demoHistory';
 import { getDb } from '../lib/firebase';
 import { DEMO_ARMS, DEMO_LEVELS, DEMO_STAFF, DEMO_SUBJECTS, demoComment, demoRoster, rng } from './demoData';
 import { DEMO_STUDENTS } from '../sample';
-import type { ClassRoom, FeeItem, Invoice, Member, Offering, Payment, Role, School, StudentProfile, SubjectRecord, Term, TermRecord } from '../data/types';
+import type { FeeItem, Invoice, Member, Payment, Role, School, StudentProfile, SubjectRecord, TermRecord } from '../data/types';
 
-/** Writes in batches of 400, Firestore's limit being 500 per batch. */
+/** Writes in batches of 400 (Firestore allows 500), all sent at once rather than one after another. */
 function batcher() {
   const ops: [DocumentReference, object][] = [];
   return {
     set: (ref: DocumentReference, data: object) => ops.push([ref, data]),
-    commit: async () => {
+    commit: () => {
+      const all: Promise<void>[] = [];
       for (let i = 0; i < ops.length; i += 400) {
         const b = writeBatch(getDb());
         for (const [ref, data] of ops.slice(i, i + 400)) b.set(ref, data);
-        await b.commit();
+        all.push(b.commit());
       }
+      return Promise.all(all).then(() => undefined);
     },
   };
 }
@@ -41,23 +43,21 @@ export function Demo() {
         const u = user ?? (await signInDemo());
         // Reuse this browser's demo school if it already has one in the current format.
         const mine = await getUserSchools(u.uid);
-        for (const id of Object.keys(mine.schools)) {
-          const s = (await getDoc(paths.school(id)).catch(() => null))?.data() as School | undefined;
+        const ids = Object.keys(mine.schools);
+        const docs = await Promise.all(ids.map((id) => getDoc(paths.school(id)).catch(() => null)));
+        for (const [i, id] of ids.entries()) {
+          const s = docs[i]?.data() as School | undefined;
           // Demo schools last a week; after that this browser gets a fresh one.
-          if (s?.demo && Date.now() - (s.createdAt ?? 0) > 7 * 864e5) {
-            await deleteSchool(id, u.uid).catch(() => undefined);
-            continue;
-          }
-          // Older, smaller demo schools are replaced by the current one.
-          if (s?.demo && (s.demoVersion ?? 0) < DEMO_VERSION) {
-            await deleteSchool(id, u.uid).catch(() => undefined);
+          // Older, smaller demo schools are replaced by the current one. Both are cleared up in the background.
+          if (s?.demo && (Date.now() - (s.createdAt ?? 0) > 7 * 864e5 || (s.demoVersion ?? 0) < DEMO_VERSION)) {
+            void deleteSchool(id, u.uid).catch(() => undefined);
             continue;
           }
           if (s?.arms) return nav(`/s/${id}`, { replace: true });
         }
 
         setStatus('Setting up Greenfield Academy (demo)…');
-        const schoolId = await createSchool(
+        const { schoolId, school, term, classes, offerings } = await createSchoolFull(
           { uid: u.uid, name: 'Demo head teacher', email: '' },
           {
             name: 'Greenfield Academy (demo)',
@@ -68,12 +68,11 @@ export function Demo() {
             subjects: DEMO_SUBJECTS,
             classes: DEMO_LEVELS.flatMap((level) => DEMO_ARMS.map((arm) => ({ name: `${level}${arm}`, level, arm, subject: '' }))),
             demo: true,
+            // Set with the school, so a reload can't mistake it for an old demo and remove it.
+            demoVersion: DEMO_VERSION,
           },
         );
-        const school = (await getDoc(paths.school(schoolId))).data() as School;
-        const termId = school.currentTermId;
-        const classes = (await getDocs(paths.classes(schoolId))).docs.map((d) => d.data() as ClassRoom);
-        const offerings = (await getDocs(paths.offerings(schoolId))).docs.map((d) => d.data() as Offering);
+        const termId = term.id;
 
         setStatus(`Adding ${DEMO_LEVELS.length * DEMO_ARMS.length} arms of students, notes and scores…`);
         const b = batcher();
@@ -165,14 +164,16 @@ export function Demo() {
             b.set(modDoc(schoolId, 'payments', p.id), p);
           }
         }
-        await b.commit();
-        // Placeholder staff need the demo rule in firestore.rules; without it the demo still opens, just without staff.
-        await staff.commit().catch((e) => console.warn('Demo staff not added:', e));
-        setStatus('Adding registers and last term’s figures…');
-        const term = (await getDoc(paths.term(schoolId, termId))).data() as Term;
-        await seedDemoHistory({ schoolId, school, term, uid: u.uid, classes, offerings, students: seededStudents, subjectRecords: seededScores });
-        await updateSchool(schoolId, { demoVersion: DEMO_VERSION });
-        await addNotice(schoolId, {
+        // Everything below is written to this browser's local copy straight away and synced in the background,
+        // so the school opens in a few seconds instead of waiting for each batch to reach the server.
+        const pending = [
+          b.commit(),
+          // Placeholder staff need the demo rule in firestore.rules; without it the demo still opens, just without staff.
+          staff.commit().catch((e) => console.warn('Demo staff not added:', e)),
+          seedDemoHistory({ schoolId, school, term, uid: u.uid, classes, offerings, students: seededStudents, subjectRecords: seededScores }),
+        ];
+        void Promise.allSettled(pending).then((rs) => rs.forEach((r) => r.status === 'rejected' && console.warn('Demo data not saved:', r.reason)));
+        void addNotice(schoolId, {
           title: 'Report cards due Friday',
           body: 'Please finish score sheets and form teacher comments by Friday. Results will be published to parents on Monday.',
           audience: 'staff',

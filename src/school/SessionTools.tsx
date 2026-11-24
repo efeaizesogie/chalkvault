@@ -108,7 +108,7 @@ export function SessionTools() {
 
   return (
     <>
-      <section className="panel wide">
+      <section className="panel wide" id="set-session">
         <h2 className="h3">End of session: promote students</h2>
         <p className="muted small">
           Each arm moves up to the next class. Students in the final class become alumni. Change any arm below, then promote once, after the last term’s results are
@@ -172,7 +172,7 @@ export function SessionTools() {
           </button>
         </div>
       </section>
-      <section className="panel wide">
+      <section className="panel wide" id="set-export">
         <h2 className="h3">Export all your data</h2>
         <p className="muted small">Your school owns its records. Download everything as JSON, plus a students CSV you can open in Excel. Free, any time.</p>
         <div>

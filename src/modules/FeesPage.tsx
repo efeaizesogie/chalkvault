@@ -162,7 +162,7 @@ export function FeesPage() {
                 {[...termInvoices]
                   .filter((i) => i.balance > 0)
                   .sort((a, b) => b.balance - a.balance)
-                  .slice(0, 8)
+                  .slice(0, Math.max(8, new Set(termInvoices.map((i) => i.classId)).size))
                   .map((i) => (
                     <li key={i.id}>
                       <Link to={`/s/${schoolId}/fees?tab=invoices&student=${i.studentId}`}>{nameOf(i.studentId)}</Link>

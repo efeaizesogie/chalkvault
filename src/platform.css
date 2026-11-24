@@ -81,7 +81,8 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .roster-head .mono { margin-left: auto; }
 .record-row { grid-template-columns: minmax(160px, 1.2fr) 120px minmax(0, 1fr) 60px; text-decoration: none; }
 
-.record-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; align-items: start; }
+.record-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 380px), 1fr)); gap: 16px; align-items: stretch; }
+.record-grid > .panel, .record-grid > section { align-content: start; }
 .panel { border: 1px solid var(--ink); border-radius: 20px; padding: 20px; display: grid; grid-template-columns: minmax(0, 1fr); gap: 14px; background: var(--sheet); }
 .panel.wide { grid-column: 1 / -1; }
 .panel-head { display: flex; justify-content: space-between; align-items: baseline; }
@@ -480,9 +481,32 @@ select:not([multiple]):not([size]) {
   .ws .masthead-actions .pill { padding: 4px 8px; font-size: 12px; gap: 4px; }
 }
 
-/* Overview: attendance leads side by side; every other card flows into balanced columns, so cards of
-   different heights never leave holes. Two columns on a laptop, three on a wide screen, one on a phone. */
-.dash-lead { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
-.dash-flow { columns: 3 340px; column-gap: 16px; }
-.dash-flow > * { break-inside: avoid; margin: 0 0 16px; }
-@media (max-width: 1100px) { .dash-lead { grid-template-columns: minmax(0, 1fr); } }
+/* Overview: one grid of planned rows. Cards in a row stretch to the same height, so rows never leave holes.
+   At most three columns; the weekly attendance chart spans two. */
+.dash-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(max(320px, calc((100% - 32px) / 3)), 1fr)); gap: 16px; align-items: stretch; }
+.dash-grid > .wide { grid-column: span 2; }
+.dash-grid > .panel { align-content: start; }
+@media (max-width: 760px) { .dash-grid > .wide { grid-column: auto; } }
+
+/* Settings: a sticky list of sections beside one column of panels, so tall and short panels never leave holes. */
+.settings-layout { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; align-items: start; }
+.settings-nav { position: sticky; top: calc(var(--mast-h, 64px) + 16px); display: grid; gap: 2px; padding: 8px 0; border-left: 1px solid var(--rule); }
+.settings-nav a { padding: 7px 14px; text-decoration: none; color: var(--ink-2); border-left: 3px solid transparent; margin-left: -2px; font-size: 15px; }
+.settings-nav a:hover { color: var(--ink); background: var(--paper); }
+.settings-nav a.on { color: var(--ink); border-left-color: var(--ink); font-weight: 600; }
+.settings-nav a:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.settings-stack { display: grid; gap: 16px; min-width: 0; }
+.settings-stack > section { scroll-margin-top: calc(var(--mast-h, 64px) + 16px); }
+/* Wide panels use two columns of fields instead of one long column. */
+@media (min-width: 1100px) {
+  #set-rules, #set-details, #set-grades { grid-template-columns: repeat(2, minmax(0, 1fr)); column-gap: 24px; }
+  #set-rules > :is(h2, h3, .form-grid, .picker, div.field), #set-details > h2, #set-grades > h2 { grid-column: 1 / -1; }
+  #set-subjects .settings-classes { columns: 2 260px; column-gap: 24px; }
+  #set-subjects .settings-classes li { break-inside: avoid; }
+}
+@media (max-width: 900px) {
+  .settings-layout { grid-template-columns: minmax(0, 1fr); }
+  .settings-nav { position: static; display: flex; overflow-x: auto; border-left: 0; border-bottom: 1px solid var(--rule); scrollbar-width: none; }
+  .settings-nav a { white-space: nowrap; border-left: 0; border-bottom: 3px solid transparent; margin: 0 0 -1px; }
+  .settings-nav a.on { border-bottom-color: var(--ink); }
+}
