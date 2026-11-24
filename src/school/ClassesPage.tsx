@@ -24,7 +24,20 @@ export function ClassesPage() {
         <Link className="pill ghost" to={`/s/${schoolId}/settings`}>
           Add arms or subjects
         </Link>
-        <PrintExport title="Classes" />
+        <PrintExport
+          title="Classes"
+          rows={() => [
+            ['Class', 'Arm', 'Students', 'Form teacher', 'Subjects', 'Subjects with a teacher'],
+            ...levels.flatMap((l) =>
+              classes
+                .filter((c) => c.level === l)
+                .map((c) => {
+                  const offs = offerings.filter((o) => o.classId === c.id);
+                  return [l, c.name, count(c.id), members.filter((m) => m.classIds.includes(c.id)).map((m) => m.name).join(', '), offs.length, offs.filter((o) => o.teacherIds.length).length];
+                }),
+            ),
+          ]}
+        />
       </header>
       {levels.map((level) => {
         const arms = classes.filter((c) => c.level === level);

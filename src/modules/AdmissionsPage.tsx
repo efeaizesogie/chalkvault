@@ -98,7 +98,14 @@ export function AdmissionsPage() {
           <h1 className="display-sm">Admissions</h1>
           <p className="lede">Share one link with parents. Every application lands here for you to review and enrol.</p>
         </div>
-        <PrintExport title="Admissions" />
+        <PrintExport
+          title="Admissions"
+          landscape
+          rows={() => [
+            ['Child', 'Class applying for', 'Date of birth', 'Parent or guardian', 'Phone', 'Email', 'Previous school', 'Status', 'Applied'],
+            ...[...apps.data].sort((a, b) => b.at - a.at).map((a) => [a.childName, a.level, a.dob, a.guardianName, a.guardianPhone, a.guardianEmail, a.previousSchool, a.status, new Date(a.at).toLocaleDateString()]),
+          ]}
+        />
       </header>
 
       <section className="panel wide">

@@ -67,7 +67,10 @@ export function LeavePage() {
           <h1 className="display-sm">Leave</h1>
           <p className="lede">{isAdmin ? 'Requests from staff, and who is away today.' : 'Ask for time off and track your requests.'}</p>
         </div>
-        <PrintExport title="Staff leave" />
+        <PrintExport
+          title="Staff leave"
+          rows={() => [['Staff member', 'From', 'To', 'Reason', 'Status', 'Requested'], ...sorted.map((l) => [l.name, l.from, l.to, l.reason, l.status, new Date(l.at).toLocaleDateString()])]}
+        />
       </header>
 
       <section className="panel wide">

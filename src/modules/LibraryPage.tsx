@@ -8,6 +8,7 @@ import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
 import { PrintExport } from '../components/PrintExport';
+import { tableRows } from '../lib/print';
 
 const addDays = (iso: string, days: number) => {
   const d = new Date(iso + 'T00:00:00');
@@ -130,7 +131,7 @@ export function LibraryPage() {
           <span className="mono">Find a book</span>
           <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Title or author" />
         </label>
-        <PrintExport title="Library" fromTable />
+        <PrintExport title="Library" rows={() => tableRows(document.querySelector<HTMLTableElement>('.ws-main table'))} />
       </header>
 
       <section className="panel wide">

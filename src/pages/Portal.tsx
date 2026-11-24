@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom';
 import { readResult } from '../data/api';
 import type { PublishedResult } from '../data/types';
 import { ReportCardView } from '../components/ReportCardView';
+import { printDoc } from '../lib/print';
+import { reportCardsDoc } from '../lib/printDocs';
 import { AuthShell } from './AuthShell';
 
 /** Public result checker: a parent enters the private PIN from the school's slip. No account needed. */
@@ -51,7 +53,17 @@ export function Portal() {
                 ))}
               </select>
             )}
-            <button className="pill ghost" onClick={() => window.print()}>
+            <button
+              className="pill ghost"
+              onClick={() =>
+                card &&
+                printDoc(
+                  `Report card, ${result.studentName}, ${card.termName}`,
+                  reportCardsDoc({ name: result.schoolName, address: result.schoolAddress, motto: result.schoolMotto, logo: result.schoolLogo }, [{ studentName: result.studentName, admissionNo: result.admissionNo, card }]),
+                  { letterhead: false },
+                )
+              }
+            >
               Print
             </button>
             <button className="link" onClick={() => setResult(null)}>

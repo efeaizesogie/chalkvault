@@ -11,7 +11,8 @@ import { ReportCardView } from '../components/ReportCardView';
 import { IncidentLog } from '../modules/IncidentLog';
 import { whatsappLink } from '../lib/share';
 import { useSchool } from './SchoolContext';
-import { printParts } from '../lib/print';
+import { printDoc } from '../lib/print';
+import { studentDoc } from '../lib/printDocs';
 
 const blankGuardian: Guardian = { name: '', relationship: '', phone: '', email: '', language: 'English' };
 
@@ -66,7 +67,25 @@ export function StudentRecord() {
           </p>
         </div>
         <div className="head-actions">
-          <button className="pill ghost" onClick={() => printParts([document.querySelector<HTMLElement>('.ws-main .page')], { title: `Student record, ${p.name}` })}>
+          <button
+            className="pill ghost"
+            onClick={() =>
+              printDoc(
+                `Student record, ${p.name}`,
+                studentDoc({
+                  name: p.name,
+                  arm: cls?.name ?? 'No class',
+                  admissionNo: p.admissionNo,
+                  dob: p.dob,
+                  status: p.status === 'alumni' ? 'Alumni' : p.status === 'withdrawn' ? 'Withdrawn' : 'Enrolled',
+                  guardians: p.guardians.filter((g) => g.name || g.phone),
+                  medical: p.medicalNotes,
+                  card: card ? { termName: card.termName, assessments: card.assessments, subjects: card.subjects, average: card.average, position: card.position, attendance: card.attendance } : undefined,
+                  comments: sorted.filter((r) => r.final || r.draft).map((r) => ({ term: termName(r.termId), comment: r.final ?? r.draft?.comment ?? '', principal: r.principalComment })),
+                }),
+              )
+            }
+          >
             Print record
           </button>
           <button className="ticket" onClick={save} disabled={!dirty || !canEdit} title={canEdit ? undefined : 'Only admins or the form teacher can edit this record'}>

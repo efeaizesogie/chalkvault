@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { CLASS_COLOURS, type ClassRoom, type Student } from '../data/types';
 import type { DeviceStatus } from '../lib/ai';
 import { batchQueue, download, finalText, slug, toCSV, toPlain } from '../lib/export';
+import { printDoc } from '../lib/print';
+import { tableDoc } from '../lib/printDocs';
 
 function status(s: Student) {
   if (s.status === 'approved') return 'Approved';
@@ -113,7 +115,7 @@ export function ClassSheet(props: {
                 <button
                   onClick={() => {
                     setExportOpen(false);
-                    setTimeout(() => window.print(), 50);
+                    printDoc(`Form comments, ${cls.name}`, tableDoc(`${cls.name} form comments`, [['Student', 'Comment'], ...students.filter((s) => finalText(s)).map((s) => [s.name, finalText(s)])], { subtitle: props.termName, groupBy: false }));
                   }}
                 >
                   Print / save as PDF
@@ -188,26 +190,7 @@ export function ClassSheet(props: {
         </button>
       )}
 
-      <PrintSheet cls={cls} students={students} termName={props.termName} />
     </section>
   );
 }
 
-function PrintSheet({ cls, students, termName }: { cls: ClassRoom; students: Student[]; termName: string }) {
-  return (
-    <div className="print-only">
-      <h1>{cls.name}</h1>
-      <p>
-        {cls.subject || cls.level} {termName && `· ${termName}`}
-      </p>
-      {students
-        .filter((s) => finalText(s))
-        .map((s) => (
-          <article key={s.id}>
-            <h2>{s.name}</h2>
-            <p>{finalText(s)}</p>
-          </article>
-        ))}
-    </div>
-  );
-}

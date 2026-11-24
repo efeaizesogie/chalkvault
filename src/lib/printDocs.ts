@@ -219,3 +219,238 @@ export function tableDoc(
     .join('');
   return `<h1>${esc(title)}</h1>${opts.subtitle ? `<p class="doc-sub">${esc(opts.subtitle)}</p>` : ''}${opts.intro ?? ''}${body}`;
 }
+
+// ---------- Single documents ----------
+
+const money = (n: number) => `₦${Math.round(n).toLocaleString('en-NG')}`;
+const day = (iso: string) => (iso ? new Date(`${iso}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : '');
+
+/** Turns the AI's lesson-note text (headings, bullets, numbered steps, paragraphs) into tidy HTML. */
+function noteHtml(text: string) {
+  const out: string[] = [];
+  let list: { tag: 'ul' | 'ol'; items: string[] } | null = null;
+  const flush = () => {
+    if (list) out.push(`<${list.tag}>${list.items.map((i) => `<li>${i}</li>`).join('')}</${list.tag}>`);
+    list = null;
+  };
+  const inline = (s: string) => esc(s).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line) {
+      flush();
+      continue;
+    }
+    const bullet = line.match(/^[*•-]\s+(.*)$/);
+    const num = line.match(/^\d+[.)]\s+(.*)$/);
+    const hashHead = line.match(/^#+\s*(.*)$/);
+    const colonHead = line.length < 60 && /:$/.test(line) ? line.replace(/:$/, '') : null;
+    const shortHead = line.length < 40 && /^[A-Z][A-Za-z ,'’()/-]+$/.test(line) && !/[.!?]$/.test(line) ? line : null;
+    const head = hashHead ? hashHead[1] : colonHead ?? shortHead;
+    if (bullet || num) {
+      const tag = bullet ? 'ul' : 'ol';
+      if (!list || list.tag !== tag) {
+        flush();
+        list = { tag, items: [] };
+      }
+      list.items.push(inline((bullet ?? num)![1]));
+    } else if (head) {
+      flush();
+      out.push(`<h2>${inline(head.replace(/\*\*/g, ''))}</h2>`);
+    } else {
+      flush();
+      out.push(`<p>${inline(line)}</p>`);
+    }
+  }
+  flush();
+  return out.join('');
+}
+
+/** A lesson note and its quiz, with the answer key on its own page. */
+export function lessonDoc(l: { subject: string; level: string; topic: string; week?: string; notes: string; quiz: { question: string; options: string[]; answer: number; explanation: string }[]; author?: string }) {
+  const L = ['A', 'B', 'C', 'D'];
+  const quiz = l.quiz.length
+    ? `<section class="quiz"><h2>Quiz: ${l.quiz.length} questions</h2><ol class="q-list">${l.quiz
+        .map((q) => `<li><p>${esc(q.question)}</p><ol class="opts">${q.options.map((o, i) => `<li><b>${L[i]}.</b> ${esc(o)}</li>`).join('')}</ol></li>`)
+        .join('')}</ol></section>
+      <section class="answer-key"><h2>Answer key</h2><table><thead><tr><th class="num">No.</th><th>Answer</th><th>Why</th></tr></thead><tbody>${l.quiz
+        .map((q, i) => `<tr><td class="num">${i + 1}</td><td>${L[q.answer] ?? ''}. ${esc(q.options[q.answer] ?? '')}</td><td>${esc(q.explanation)}</td></tr>`)
+        .join('')}</tbody></table></section>`
+    : '';
+  return `<h1>${esc(l.topic)}</h1>
+  <p class="doc-sub">${esc(l.subject)}, ${esc(l.level)}${l.week ? `, week ${esc(l.week)}` : ''}${l.author ? `. Prepared by ${esc(l.author)}` : ''}</p>
+  <div class="note-body">${noteHtml(l.notes)}</div>
+  ${quiz}`;
+}
+
+/** A fee invoice for one child, with what has been paid so far. */
+export function invoiceDoc(x: {
+  studentName: string;
+  arm: string;
+  admissionNo?: string;
+  termLabel: string;
+  lines: { name: string; amount: number }[];
+  discounts: { name: string; amount: number }[];
+  arrears: number;
+  total: number;
+  paid: number;
+  balance: number;
+  payments: { date: string; receiptNo: string; amount: number; method: string }[];
+}) {
+  const row = (label: string, v: string, cls = '') => `<tr${cls ? ` class="${cls}"` : ''}><td>${esc(label)}</td><td class="num">${v}</td></tr>`;
+  return `<h1>Invoice</h1>
+  <div class="bill">
+    <div><span>Bill to the parent or guardian of</span><b>${esc(x.studentName)}</b><span>${esc(x.arm)}${x.admissionNo ? `, admission no. ${esc(x.admissionNo)}` : ''}</span></div>
+    <div><span>For</span><b>${esc(x.termLabel)}</b><span>Issued ${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
+  </div>
+  <section class="keep"><table class="money"><thead><tr><th>Item</th><th class="num">Amount</th></tr></thead><tbody>
+    ${x.lines.map((l) => row(l.name, money(l.amount))).join('')}
+    ${x.discounts.map((d) => row(`Less: ${d.name}`, `−${money(d.amount)}`)).join('')}
+    ${x.arrears > 0 ? row('Arrears from last term', money(x.arrears)) : ''}
+    ${row('Total due', money(x.total), 'subtotal')}
+    ${row('Paid so far', money(x.paid))}
+    ${row('Balance to pay', money(x.balance), 'subtotal')}
+  </tbody></table></section>
+  ${
+    x.payments.length
+      ? `<section class="keep"><h2>Payments received</h2><table><thead><tr><th>Date</th><th>Receipt</th><th>Method</th><th class="num">Amount</th></tr></thead><tbody>${x.payments
+          .map((p) => `<tr><td>${day(p.date)}</td><td>${esc(p.receiptNo)}</td><td>${esc(p.method)}</td><td class="num">${money(p.amount)}</td></tr>`)
+          .join('')}</tbody></table></section>`
+      : ''
+  }
+  <p class="note">Please quote the child’s name and admission number with every payment. Thank you.</p>`;
+}
+
+/** An official receipt for one payment. */
+export function receiptDoc(x: { receiptNo: string; date: string; payer: string; studentName: string; arm: string; termLabel: string; amount: number; method: string; reference?: string; receivedBy: string; balance?: number }) {
+  return `<h1>Official receipt</h1>
+  <p class="doc-sub">Receipt no. ${esc(x.receiptNo)}, ${day(x.date)}</p>
+  <section class="keep"><table class="money"><tbody>
+    <tr><td>Received from</td><td>${esc(x.payer || 'The parent or guardian')}</td></tr>
+    <tr><td>For</td><td>${esc(x.studentName)}, ${esc(x.arm)}, ${esc(x.termLabel)} fees</td></tr>
+    <tr><td>Paid by</td><td>${esc(x.method)}${x.reference ? `, reference ${esc(x.reference)}` : ''}</td></tr>
+    <tr class="subtotal"><td>Amount received</td><td class="num">${money(x.amount)}</td></tr>
+    ${x.balance !== undefined ? `<tr><td>Balance still to pay</td><td class="num">${money(x.balance)}</td></tr>` : ''}
+  </tbody></table></section>
+  <div class="sign"><div><span>Received by</span><b>${esc(x.receivedBy)}</b></div><div><span>Signature and stamp</span><b>&nbsp;</b></div></div>`;
+}
+
+/** Result PIN slips to cut out and hand to each child, eight to a page. */
+export function slipsDoc(x: { schoolName: string; arm: string; portal: string; students: { name: string; pin?: string }[] }) {
+  return `<div class="slips-doc">${x.students
+    .map(
+      (s) => `<div class="slip"><b>${esc(x.schoolName)}</b><span>Results for ${esc(s.name)}, ${esc(x.arm)}</span><span class="pin">${esc(s.pin ?? 'Ask the school')}</span><span>Check results at ${esc(x.portal)} with this PIN. Keep it private.</span></div>`,
+    )
+    .join('')}</div>`;
+}
+
+/** One student's record: profile, parents, this term's results and every term's comments. */
+export function studentDoc(x: {
+  name: string;
+  arm: string;
+  admissionNo: string;
+  dob: string;
+  status: string;
+  guardians: { name: string; relationship: string; phone: string; email: string; language: string }[];
+  card?: { termName: string; assessments: { key: string; label: string; max: number }[]; subjects: { subject: string; scores: Record<string, number>; total: number; grade: string; remark: string }[]; average: number; position?: string; attendance?: { present: number; days: number } };
+  comments: { term: string; comment: string; principal?: string }[];
+  medical?: string;
+}) {
+  const c = x.card;
+  return `<h1>${esc(x.name)}</h1>
+  <p class="doc-sub">${esc(x.arm)}${x.admissionNo ? `, admission no. ${esc(x.admissionNo)}` : ''}</p>
+  <div class="cols">
+    <section class="keep"><h2>Profile</h2><table><tbody>
+      <tr><td>Class</td><td>${esc(x.arm)}</td></tr>
+      <tr><td>Admission no.</td><td>${esc(x.admissionNo || 'Not set')}</td></tr>
+      <tr><td>Date of birth</td><td>${esc(x.dob ? day(x.dob) : 'Not recorded')}</td></tr>
+      <tr><td>Status</td><td>${esc(x.status)}</td></tr>
+      ${x.medical ? `<tr><td>Medical notes</td><td>${esc(x.medical)}</td></tr>` : ''}
+    </tbody></table></section>
+    <section class="keep"><h2>Parents and guardians</h2>${
+      x.guardians.length
+        ? `<table><tbody>${x.guardians.map((g) => `<tr><td><b>${esc(g.name)}</b><br>${esc(g.relationship)}</td><td>${esc(g.phone)}<br>${esc(g.email)}</td></tr>`).join('')}</tbody></table>`
+        : '<p class="note">None recorded.</p>'
+    }</section>
+  </div>
+  ${
+    c
+      ? `<section class="keep"><h2>${esc(c.termName)} results</h2>
+    <table><thead><tr><th>Subject</th>${c.assessments.map((a) => `<th class="num">${esc(a.label)} (${a.max})</th>`).join('')}<th class="num">Total</th><th>Grade</th><th>Remark</th></tr></thead><tbody>${c.subjects
+      .map((s) => `<tr><td>${esc(s.subject)}</td>${c.assessments.map((a) => `<td class="num">${s.scores[a.key] ?? ''}</td>`).join('')}<td class="num"><b>${s.grade ? s.total : ''}</b></td><td>${esc(s.grade)}</td><td>${esc(s.remark)}</td></tr>`)
+      .join('')}</tbody></table>
+    <p class="note">Average ${c.average ? `${c.average}%` : 'not yet'}${c.position ? `, ${esc(c.position)} in the class` : ''}${c.attendance ? `. Present on ${c.attendance.present} of ${c.attendance.days} school days` : ''}.</p></section>`
+      : ''
+  }
+  <section><h2>Comments, term by term</h2>${
+    x.comments.length
+      ? x.comments.map((m) => `<div class="keep cmt"><b>${esc(m.term)}</b><p>${esc(m.comment)}</p>${m.principal ? `<p class="note">Principal: ${esc(m.principal)}</p>` : ''}</div>`).join('')
+      : '<p class="note">No comments written yet.</p>'
+  }</section>`;
+}
+
+/** Report cards, one per page, each with the school's own heading (no app letterhead). */
+export function reportCardsDoc(
+  school: { name: string; address?: string; motto?: string; logo?: string; principalName?: string },
+  cards: {
+    studentName: string;
+    admissionNo: string;
+    card: {
+      termName: string;
+      session: string;
+      className: string;
+      assessments: { key: string; label: string; max: number }[];
+      subjects: { subject: string; scores: Record<string, number>; total: number; grade: string; remark: string; position?: string; teacherRemark?: string }[];
+      average: number;
+      position?: string;
+      classSize: number;
+      attendance?: { present: number; days: number };
+      formComment?: string;
+      principalComment?: string;
+      nextTermBegins?: string;
+      gradeKey: { grade: string; min: number; remark: string }[];
+      cumulative?: { termNames: string[]; subjects: { subject: string; totals: (number | null)[]; average: number }[]; average: number; passes: boolean; reasons: string[] };
+    };
+  }[],
+) {
+  return cards
+    .map(({ studentName, admissionNo, card: c }) => {
+      const showPos = c.subjects.some((s) => s.position);
+      const cum = c.cumulative;
+      return `<article class="rc-doc">
+      <header class="rc-doc-head">
+        ${school.logo ? `<img src="${esc(school.logo)}" alt="">` : ''}
+        <div><b>${esc(school.name)}</b>${school.address ? `<span>${esc(school.address)}</span>` : ''}${school.motto ? `<i>${esc(school.motto)}</i>` : ''}</div>
+        <div class="rc-doc-term"><b>Report card</b><span>${esc(c.termName)}${c.session ? `, ${esc(c.session)} session` : ''}</span></div>
+      </header>
+      <table class="rc-doc-who"><tbody><tr>
+        <td><span>Student</span><b>${esc(studentName)}</b></td>
+        <td><span>Class</span><b>${esc(c.className)}</b></td>
+        <td><span>Admission no.</span><b>${esc(admissionNo || 'Not set')}</b></td>
+        <td><span>Average</span><b>${c.average ? `${c.average}%` : 'No scores'}</b></td>
+        ${c.position ? `<td><span>Position</span><b>${esc(c.position)}</b></td>` : ''}
+        ${c.attendance ? `<td><span>Attendance</span><b>${c.attendance.present} of ${c.attendance.days} days</b></td>` : ''}
+      </tr></tbody></table>
+      <table><thead><tr><th>Subject</th>${c.assessments.map((a) => `<th class="num">${esc(a.label)} (${a.max})</th>`).join('')}<th class="num">Total</th><th>Grade</th>${showPos ? '<th>Position</th>' : ''}<th>Remark</th></tr></thead>
+      <tbody>${c.subjects
+        .map((s) => `<tr><td>${esc(s.subject)}</td>${c.assessments.map((a) => `<td class="num">${s.scores[a.key] ?? ''}</td>`).join('')}<td class="num"><b>${s.grade ? s.total : ''}</b></td><td>${esc(s.grade)}</td>${showPos ? `<td>${esc(s.position ?? '')}</td>` : ''}<td>${esc(s.teacherRemark || s.remark)}</td></tr>`)
+        .join('')}</tbody></table>
+      ${
+        cum
+          ? `<h2>Cumulative result for the session</h2><table><thead><tr><th>Subject</th>${cum.termNames.map((t) => `<th class="num">${esc(t)} %</th>`).join('')}<th class="num">Average %</th></tr></thead><tbody>${cum.subjects
+              .map((s) => `<tr><td>${esc(s.subject)}</td>${s.totals.map((v) => `<td class="num">${v ?? ''}</td>`).join('')}<td class="num"><b>${s.average}</b></td></tr>`)
+              .join('')}<tr class="subtotal"><td colspan="${cum.termNames.length + 1}">Cumulative average</td><td class="num">${cum.average}</td></tr></tbody></table>
+            <p class="note"><b>${cum.passes ? 'Meets the school’s promotion rule.' : 'Promotion under review.'}</b>${cum.passes ? '' : ` ${esc(cum.reasons.join('; '))}.`}</p>`
+          : ''
+      }
+      <div class="cols rc-doc-comments">
+        <div><h2>Form teacher’s comment</h2><p>${esc(c.formComment || 'Not written yet.')}</p></div>
+        <div><h2>${school.principalName ? `Principal’s comment (${esc(school.principalName)})` : 'Principal’s comment'}</h2><p>${esc(c.principalComment || 'Not written yet.')}</p></div>
+      </div>
+      <p class="note">${c.nextTermBegins ? `Next term begins ${new Date(`${c.nextTermBegins}T12:00`).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}. ` : ''}Grades: ${c.gradeKey
+        .map((b, i) => `${esc(b.grade)} ${b.min > 0 ? `${b.min}% and above` : `below ${c.gradeKey[i - 1]?.min ?? 0}%`}`)
+        .join(', ')}.</p>
+      <div class="sign"><div><span>Form teacher</span><b>&nbsp;</b></div><div><span>Principal</span><b>&nbsp;</b></div></div>
+    </article>`;
+    })
+    .join('');
+}

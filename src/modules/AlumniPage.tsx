@@ -57,7 +57,13 @@ export function AlumniPage() {
             <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Name" />
           </label>
         )}
-        <PrintExport title="Alumni" />
+        <PrintExport
+          title="Alumni"
+          rows={() => [
+            ['Name', 'Admission no.', 'Session left', 'Parent or guardian', 'Phone'],
+            ...groups.flatMap(([session, list]) => list.map((s) => [s.name, s.admissionNo, session, s.guardians[0]?.name ?? '', s.guardians[0]?.phone ?? ''])),
+          ]}
+        />
       </header>
 
       {total === 0 ? (

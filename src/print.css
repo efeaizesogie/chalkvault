@@ -128,3 +128,46 @@
   .doc table.grp { table-layout: fixed; }
   .doc table.grp th:first-child { width: 28%; }
 }
+
+/* Single documents: lesson note and quiz, invoice, receipt, PIN slips, report cards, student record. */
+@media print {
+  .doc .note-body p, .doc .note-body li { margin: 0 0 4px; font-size: 11.5px; line-height: 1.5; }
+  .doc .note-body ul, .doc .note-body ol { margin: 0 0 8px; padding-left: 18px; }
+  .doc .note-body h2 { margin-top: 12px; }
+  .doc .quiz { break-before: page; }
+  .doc .q-list { margin: 0; padding-left: 18px; display: grid; gap: 10px; }
+  .doc .q-list > li { break-inside: avoid; }
+  .doc .q-list p { margin: 0 0 4px; font-weight: 600; }
+  .doc .opts { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 2px 16px; }
+  .doc .answer-key { break-before: page; }
+
+  .doc .bill { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin: 8px 0 14px; }
+  .doc .bill > div, .doc .sign > div { display: grid; gap: 2px; }
+  .doc .bill span, .doc .sign span { font-size: 10px; color: var(--print-ink-2); }
+  .doc .bill b { font: 400 17px/1.2 var(--serif); }
+  .doc table.money td:first-child { width: 60%; }
+  .doc .sign { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 32px; margin-top: 36px; }
+  .doc .sign b { display: block; border-bottom: 1px solid var(--ink); min-height: 24px; font-weight: 400; }
+
+  .doc .slips-doc { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0; }
+  .doc .slip { display: grid; gap: 4px; padding: 14px; border: 1px dashed var(--print-ink-2); break-inside: avoid; min-height: 58mm; align-content: center; }
+  .doc .slip b { font: 400 15px/1.2 var(--serif); }
+  .doc .slip .pin { font: 600 20px/1.2 var(--mono); letter-spacing: 0.04em; margin: 4px 0; }
+  .doc .slip span:last-child { font-size: 9.5px; color: var(--print-ink-2); }
+
+  .doc .rc-doc { break-after: page; display: grid; gap: 8px; }
+  .doc .rc-doc:last-child { break-after: auto; }
+  .doc .rc-doc-head { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding-bottom: 10px; border-bottom: 2px solid var(--ink); }
+  .doc .rc-doc-head img { width: 54px; height: 54px; object-fit: contain; }
+  .doc .rc-doc-head > div { display: grid; gap: 2px; }
+  .doc .rc-doc-head b { font: 400 21px/1.15 var(--serif); }
+  .doc .rc-doc-head span, .doc .rc-doc-head i { font-size: 10.5px; color: var(--print-ink-2); }
+  .doc .rc-doc-term { text-align: right; }
+  .doc .rc-doc-term b { font: 600 13px/1.2 var(--sans); }
+  .doc table.rc-doc-who td { border: 1px solid var(--print-rule); vertical-align: top; }
+  .doc table.rc-doc-who span { display: block; font-size: 9.5px; color: var(--print-ink-2); }
+  .doc table.rc-doc-who b { font-weight: 600; }
+  .doc .rc-doc-comments p { margin: 0; font: 400 12px/1.5 var(--serif); }
+  .doc .cmt { padding: 6px 0; border-bottom: 1px solid var(--print-rule); }
+  .doc .cmt p { margin: 2px 0 0; font: 400 12px/1.5 var(--serif); }
+}

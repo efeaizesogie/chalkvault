@@ -11,8 +11,8 @@ import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import type { WorkspaceCtx } from '../school/Workspace';
 import { PrintExport } from '../components/PrintExport';
-import { downloadCsv, printDoc, printParts } from '../lib/print';
-import { tableDoc } from '../lib/printDocs';
+import { downloadCsv, printDoc } from '../lib/print';
+import { invoiceDoc, receiptDoc, tableDoc } from '../lib/printDocs';
 import './fees.css';
 
 type Tab = 'overview' | 'invoices' | 'payments' | 'items';
@@ -530,7 +530,27 @@ function InvoiceList(props: {
                 {term?.session ? `, ${term.session}` : ''}
               </p>
             </div>
-            <button className="pill ghost" onClick={(e) => printParts([e.currentTarget.closest<HTMLElement>('.invoice-sheet')], { title: `Invoice, ${st.name}` })}>
+            <button
+              className="pill ghost"
+              onClick={() =>
+                printDoc(
+                  `Invoice, ${st.name}`,
+                  invoiceDoc({
+                    studentName: st.name,
+                    arm: cls?.name ?? '',
+                    admissionNo: st.admissionNo,
+                    termLabel: `${term?.name ?? ''}${term?.session ? `, ${term.session}` : ''}`,
+                    lines: inv.lines,
+                    discounts: inv.discounts,
+                    arrears: inv.arrears,
+                    total: inv.total,
+                    paid: inv.paid,
+                    balance: inv.balance,
+                    payments: props.payments.filter((p) => p.studentId === st.id).map((p) => ({ date: p.date, receiptNo: p.receiptNo, amount: p.amount, method: p.method })),
+                  }),
+                )
+              }
+            >
               Print invoice
             </button>
           </div>
@@ -630,7 +650,7 @@ function Payments(props: {
   refreshDevice: () => void;
   receiptCount: number;
 }) {
-  const { schoolId, school, term, me, classes } = useSchool();
+  const { schoolId, school, term, me, classes, members } = useSchool();
   const toast = useToast();
   const fileRef = useRef<HTMLInputElement>(null);
   const [studentId, setStudentId] = useState('');
@@ -821,7 +841,28 @@ function Payments(props: {
               <p className="muted small">Official receipt {last.receiptNo}</p>
             </div>
             <div className="head-actions no-print">
-              <button className="pill ghost" onClick={(e) => printParts([e.currentTarget.closest<HTMLElement>('.receipt')], { title: `Receipt ${last.receiptNo}` })}>
+              <button
+                className="pill ghost"
+                onClick={() => {
+                  const stu = props.students.find((s) => s.id === last.studentId);
+                  printDoc(
+                    `Receipt ${last.receiptNo}`,
+                    receiptDoc({
+                      receiptNo: last.receiptNo,
+                      date: last.date,
+                      payer: last.payer,
+                      studentName: stu?.name ?? 'Student',
+                      arm: classes.find((c) => c.id === last.classId)?.name ?? '',
+                      termLabel: `${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`,
+                      amount: last.amount,
+                      method: last.method,
+                      reference: last.reference,
+                      receivedBy: members.find((m) => m.uid === last.receivedBy)?.name ?? (last.receivedBy === me.uid ? me.name : 'The school office'),
+                      balance: props.invoices.find((i) => i.studentId === last.studentId)?.balance,
+                    }),
+                  );
+                }}
+              >
                 Print receipt
               </button>
               <button className="link" onClick={() => setLast(null)}>

@@ -11,7 +11,8 @@ import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import type { WorkspaceCtx } from '../school/Workspace';
 import './lessons.css';
-import { printParts } from '../lib/print';
+import { printDoc } from '../lib/print';
+import { lessonDoc } from '../lib/printDocs';
 
 const LETTERS = ['A', 'B', 'C', 'D'];
 
@@ -95,7 +96,7 @@ export function LessonsPage() {
   const exportCbt = (l: { topic: string; quiz: QuizQuestion[] }) => {
     const q = (v: string) => `"${v.replace(/"/g, '""')}"`;
     const rows = l.quiz.map((x) => [x.question, ...x.options.concat(['', '', '', '']).slice(0, 4), LETTERS[x.answer], x.explanation].map(q).join(','));
-    download(`${l.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'quiz'}-cbt.csv`, '﻿Question,Option A,Option B,Option C,Option D,Answer,Explanation\r\n' + rows.join('\r\n'));
+    download(`${l.topic.toLowerCase().replace(/[^a-z0-9]+/g, '-') || 'quiz'}-cbt.csv`, 'Question,Option A,Option B,Option C,Option D,Answer,Explanation\r\n' + rows.join('\r\n'));
   };
 
   const open = lessons.data.find((l) => l.id === openId);
@@ -223,7 +224,7 @@ export function LessonsPage() {
               {open.subject}, {open.level}: {open.topic}
             </h2>
             <div className="head-actions no-print">
-              <button className="pill ghost" onClick={() => printParts([document.querySelector<HTMLElement>('.lesson-print')], { title: 'Lesson note' })}>
+              <button className="pill ghost" onClick={() => printDoc(`Lesson note, ${open.topic}`, lessonDoc({ subject: open.subject, level: open.level, topic: open.topic, week: open.week, notes: open.notes, quiz: open.quiz, author: open.byName }))}>
                 Print note and quiz
               </button>
               {open.quiz.length > 0 && (

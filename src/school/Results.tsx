@@ -7,7 +7,8 @@ import { CLASS_COLOURS, type ClassRoom, type Invoice, type ReportCard, type Stud
 import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
-import { printParts } from '../lib/print';
+import { printDoc } from '../lib/print';
+import { slipsDoc } from '../lib/printDocs';
 
 /** Publish an arm's report cards to the result portal. Each student keeps the same private PIN every term. */
 export function PublishButton({ classId, students, cards, blocked }: { classId: string; students: StudentProfile[]; cards: Map<string, ReportCard>; blocked: boolean }) {
@@ -119,7 +120,7 @@ function PinSlips({ cls, schoolName, portal, onDone }: { cls: ClassRoom; schoolN
               Create {missing.length} missing PIN{missing.length === 1 ? '' : 's'}
             </button>
           )}
-          <button className="pill ghost" onClick={() => printParts([document.querySelector<HTMLElement>('.slips')], { title: `Result PIN slips, ${cls.name}`, letterhead: false })}>
+          <button className="pill ghost" onClick={() => printDoc(`Result PIN slips, ${cls.name}`, slipsDoc({ schoolName, arm: cls.name, portal, students: list.map((s) => ({ name: s.name, pin: s.resultPin })) }), { letterhead: false })}>
             Print slips
           </button>
           <button className="link" onClick={onDone}>

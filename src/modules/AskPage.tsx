@@ -117,7 +117,11 @@ export function AskPage() {
             {ws.device === 'available' ? 'Gemini Nano answers here too, so nothing leaves the device.' : 'Without Gemini Nano, answers come from the cloud with every student name replaced by a code.'}
           </p>
         </div>
-        <PrintExport title="Ask Chalkvault" />
+        <PrintExport
+          title="Ask Chalkvault"
+          exportLabel="Export answers"
+          rows={() => [['Question', 'Answer', 'Where it ran'], ...turns.filter((t) => !t.pending).map((t) => [t.q, t.a.replace(/\*\*/g, ''), t.source === 'on_device' ? 'This device' : t.source === 'in_cloud' ? 'Cloud, names coded' : ''])]}
+        />
       </header>
 
       {arms.map((c) => (

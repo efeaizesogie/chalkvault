@@ -6,7 +6,8 @@ import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
-import { printParts } from '../lib/print';
+import { printDoc } from '../lib/print';
+import { tableDoc } from '../lib/printDocs';
 
 const naira = (n: number) => '₦' + (n || 0).toLocaleString('en-NG');
 
@@ -83,7 +84,21 @@ export function TransportPage() {
         </div>
         {isAdmin && routes.data.length > 0 && (
           <div className="head-actions">
-            <button className="pill ghost" onClick={() => printParts([document.querySelector<HTMLElement>('.ws-main .page')], { title: 'Transport routes' })}>
+            <button
+              className="pill ghost"
+              onClick={() =>
+                printDoc(
+                  'Transport routes',
+                  tableDoc('Transport routes', [
+                    ['Route', 'Driver', 'Driver phone', 'Stops', 'Fee per term', 'Riders'],
+                    ...routes.data.map((r) => [r.name, r.driver, r.driverPhone, r.stops, r.fee, students.data.filter((s) => s.routeId === r.id).length]),
+                    [],
+                    ['Rider', 'Route'],
+                    ...students.data.filter((s) => s.routeId).map((s) => [s.name, routes.data.find((r) => r.id === s.routeId)?.name ?? '']),
+                  ], { groupBy: false }),
+                )
+              }
+            >
               Print rider lists
             </button>
           </div>

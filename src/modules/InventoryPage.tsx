@@ -7,6 +7,7 @@ import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import './ops.css';
 import { PrintExport } from '../components/PrintExport';
+import { tableRows } from '../lib/print';
 
 export function InventoryPage() {
   const { schoolId, isAdmin } = useSchool();
@@ -102,7 +103,7 @@ export function InventoryPage() {
           <span className="mono">Find an item</span>
           <input value={find} onChange={(e) => setFind(e.target.value)} placeholder="Name, category or location" />
         </label>
-        <PrintExport title="Inventory" fromTable />
+        <PrintExport title="Inventory" rows={() => tableRows(document.querySelector<HTMLTableElement>('.ws-main table'))} />
       </header>
 
       {low.length > 0 && (

@@ -16,7 +16,8 @@ import { useArm } from './useArm';
 import { AttendanceView } from './AttendanceView';
 import { PublishButton } from './Results';
 import type { WorkspaceCtx } from './Workspace';
-import { downloadCsv, printParts, type Cell } from '../lib/print';
+import { downloadCsv, printDoc, type Cell } from '../lib/print';
+import { reportCardsDoc, tableDoc } from '../lib/printDocs';
 
 type Tab = 'register' | 'comments' | 'subjects' | 'reports' | 'students';
 
@@ -329,7 +330,6 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
   const { schoolId, school, isAdmin, term, me, policy, classes } = useSchool();
   const toast = useToast();
   const [open, setOpen] = useState<string | null>(null);
-  const [printAll, setPrintAll] = useState(false);
   const [busy, setBusy] = useState(false);
   const ranked = [...students].sort((a, b) => (cards.get(b.id)?.average ?? 0) - (cards.get(a.id)?.average ?? 0));
   const recOf = (id: string) => records.find((r) => r.studentId === id);
@@ -384,26 +384,6 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
       }),
     ];
   };
-  /** The broadsheet as a table, for printing. */
-  const broadsheetTable = () => {
-    const rows = broadsheetRows().map((r) => r.slice(0, -2));
-    const wrap = document.createElement('div');
-    const title = document.createElement('h2');
-    title.className = 'h3';
-    title.textContent = `${className} broadsheet, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`;
-    const t = document.createElement('table');
-    t.className = 'broadsheet-print';
-    rows.forEach((r, i) => {
-      const tr = t.insertRow();
-      for (const v of r) {
-        const cell = document.createElement(i === 0 ? 'th' : 'td');
-        cell.textContent = v === null || v === undefined ? '' : String(v);
-        tr.appendChild(cell);
-      }
-    });
-    wrap.append(title, t);
-    return wrap;
-  };
 
   return (
     <section className="page">
@@ -420,18 +400,30 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
           )}
           <button
             className="pill ghost"
-            onClick={() => {
-              setPrintAll(true);
+            onClick={() =>
               // Each card carries the school's own heading, so no letterhead; one card per page.
-              setTimeout(() => {
-                printParts([document.querySelector<HTMLElement>('.print-cards')], { title: `Report cards, ${className}, ${term?.name ?? ''}`, letterhead: false });
-                setPrintAll(false);
-              }, 100);
-            }}
+              printDoc(
+                `Report cards, ${className}, ${term?.name ?? ''}`,
+                reportCardsDoc(
+                  { name: school.name, address: school.address, motto: school.motto, logo: school.logo, principalName: school.principalName },
+                  ranked.filter((s) => cards.get(s.id)).map((s) => ({ studentName: s.name, admissionNo: s.admissionNo, card: cards.get(s.id)! })),
+                ),
+                { letterhead: false },
+              )
+            }
           >
             Print all report cards
           </button>
-          <button className="pill ghost" onClick={() => printParts([broadsheetTable()], { title: `Broadsheet, ${className}, ${term?.name ?? ''}`, landscape: true })}>
+          <button
+            className="pill ghost"
+            onClick={() =>
+              printDoc(
+                `Broadsheet, ${className}, ${term?.name ?? ''}`,
+                tableDoc(`${className} broadsheet`, broadsheetRows().map((r) => r.slice(0, -2)), { subtitle: `${term?.name ?? ''}${term?.session ? `, ${term.session}` : ''}`, groupBy: false }),
+                { landscape: true },
+              )
+            }
+          >
             Print broadsheet
           </button>
           <button className="pill ghost" onClick={() => downloadCsv(`Broadsheet ${className} ${term?.name ?? ''}`, broadsheetRows())}>
@@ -495,23 +487,6 @@ function ReportCards({ classId, cards, students, records, ws }: { classId: strin
           studentName={students.find((s) => s.id === open)!.name}
           admissionNo={students.find((s) => s.id === open)!.admissionNo}
         />
-      )}
-      {printAll && (
-        <div className="print-cards">
-          {ranked.map((s) => (
-            <ReportCardView
-              key={s.id}
-              card={cards.get(s.id)!}
-              schoolName={school.name}
-              schoolAddress={school.address}
-              motto={school.motto}
-              logo={school.logo}
-              principalName={school.principalName}
-              studentName={s.name}
-              admissionNo={s.admissionNo}
-            />
-          ))}
-        </div>
       )}
     </section>
   );

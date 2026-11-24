@@ -38,7 +38,10 @@ export function NoticesPage() {
           <h1 className="display-sm">Notices</h1>
           <p className="lede">Announcements for every member of staff.</p>
         </div>
-        <PrintExport title="Notices" />
+        <PrintExport
+          title="Notices"
+          rows={() => [['Date', 'Notice', 'For', 'Posted by'], ...notices.data.map((n) => [new Date(n.at).toLocaleDateString(), `${n.title}: ${n.body}`, n.audience === 'parents' ? 'Parents' : 'Staff', n.byName])]}
+        />
       </header>
       {isAdmin && (
         <section className="panel">

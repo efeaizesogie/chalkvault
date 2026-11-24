@@ -118,7 +118,19 @@ export function MessagesPage() {
           <h1 className="display-sm">Messages to parents</h1>
           <p className="lede">The AI writes one message without any names, and each family’s names, amounts and result PIN are filled in on this computer.</p>
         </div>
-        <PrintExport title="Messages to parents" />
+        <PrintExport
+          title="Messages to parents"
+          rows={() =>
+            ready
+              ? [['Parent or guardian', 'Child', 'Phone', 'Message'], ...rows.map(({ r, text }) => [r.guardian, r.student.name, r.phone, text])]
+              : [
+                  ['Sent', 'Message', 'By', 'Parent or guardian', 'Phone', 'Text'],
+                  ...[...history.data]
+                    .sort((a, b) => b.at - a.at)
+                    .flatMap((m) => m.recipients.map((x) => [new Date(m.at).toLocaleDateString(), m.title, m.byName, x.guardian, x.phone, x.text])),
+                ]
+          }
+        />
       </header>
 
       <section className="panel">
