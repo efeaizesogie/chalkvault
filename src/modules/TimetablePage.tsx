@@ -6,7 +6,8 @@ import { friendlyError } from '../lib/errors';
 import { defaultPerWeek, defaultSettings, generateTimetable, validateTimetable } from '../lib/timetable';
 import { useSchool } from '../school/SchoolContext';
 import { useToast } from '../ui/toast';
-import { downloadCsv, printParts, tableRows } from '../lib/print';
+import { downloadCsv, printDoc, tableRows } from '../lib/print';
+import { timetableDoc, type TimetablePage } from '../lib/printDocs';
 import './TimetablePage.css';
 
 const WEEKDAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -76,7 +77,38 @@ export function TimetablePage() {
 
   const viewName = () => (mode === 'class' ? classes.find((c) => c.id === armId)?.name ?? 'Timetable' : nameOf(teacherId));
   /** The timetable on screen, on a landscape page under the school's letterhead. */
-  const print = () => printParts([document.querySelector<HTMLElement>('.tt-print-area')], { title: `Timetable, ${viewName()}`, landscape: true });
+  const formTeacher = (classId: string) => members.find((m) => m.classIds.includes(classId))?.name;
+  /** One page for an arm: each lesson with its teacher. */
+  const armPage = (classId: string): TimetablePage => {
+    const cls = classes.find((c) => c.id === classId);
+    return {
+      title: `${cls?.name ?? 'Arm'} timetable`,
+      subtitle: [formTeacher(classId) ? `Form teacher: ${formTeacher(classId)}` : '', timetable?.generatedAt ? `Week plan from ${new Date(timetable.generatedAt).toLocaleDateString()}` : ''].filter(Boolean).join('. '),
+      cells: (timetable?.slots[classId] ?? []).map((s) => {
+        const o = offeringById.get(s.offeringId);
+        return { day: s.day, period: s.period, main: o?.subject ?? 'Lesson', sub: o ? teacherLabel(o) : '' };
+      }),
+    };
+  };
+  /** One page for a teacher: each lesson with its arm. */
+  const teacherPage = (uid: string): TimetablePage => ({
+    title: `${nameOf(uid)}: teaching timetable`,
+    cells: Object.entries(timetable?.slots ?? {}).flatMap(([classId, list]) =>
+      list
+        .filter((s) => (offeringById.get(s.offeringId)?.teacherIds ?? []).includes(uid))
+        .map((s) => ({ day: s.day, period: s.period, main: offeringById.get(s.offeringId)?.subject ?? 'Lesson', sub: classes.find((c) => c.id === classId)?.name })),
+    ),
+  });
+  /** The arm or teacher on screen, on one landscape page. */
+  const print = () => {
+    if (!timetable) return;
+    printDoc(`Timetable, ${viewName()}`, timetableDoc(timetable.settings, [mode === 'class' ? armPage(armId) : teacherPage(teacherId)]), { landscape: true });
+  };
+  /** Every arm, one landscape page each. */
+  const printAll = () => {
+    if (!timetable) return;
+    printDoc('Timetables, all arms', timetableDoc(timetable.settings, classes.filter((c) => timetable.slots[c.id]?.length).map((c) => armPage(c.id))), { landscape: true });
+  };
   const exportView = () => downloadCsv(`Timetable ${viewName()}`, tableRows(document.querySelector<HTMLTableElement>('.tt-print-area table')));
 
   const offeringById = useMemo(() => new Map(offerings.map((o) => [o.id, o])), [offerings]);
@@ -105,6 +137,9 @@ export function TimetablePage() {
           <div className="head-actions">
             <button className="pill ghost" onClick={print}>
               Print
+            </button>
+            <button className="pill ghost" onClick={printAll}>
+              Print all arms
             </button>
             <button className="pill ghost" onClick={exportView}>
               Export CSV

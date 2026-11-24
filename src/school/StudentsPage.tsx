@@ -39,7 +39,7 @@ export function StudentsPage() {
           <span className="mono">Find a student</span>
           <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Name or admission number" />
         </label>
-        <PrintExport title="Student list" rows={exportStudents} />
+        <PrintExport title="Student list" rows={exportStudents} landscape />
       </header>
       {myClasses.map((c) => (
         <ClassStudents key={c.id} cls={c} q={q.trim().toLowerCase()} />

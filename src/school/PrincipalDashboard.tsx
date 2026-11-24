@@ -12,7 +12,8 @@ import { summaryText, weekOf, type StudentRisk } from '../lib/termStats';
 import { BarRows, ChartCard, Columns, Figure, LineChart, type Series } from '../components/Charts';
 import { SourceStamp } from '../components/SourceStamp';
 import { PrintExport } from '../components/PrintExport';
-import type { Cell } from '../lib/print';
+import { printDoc, type Cell } from '../lib/print';
+import { overviewDoc } from '../lib/printDocs';
 import { Prose } from '../components/Prose';
 import { useSchool } from './SchoolContext';
 import { useSavedSummary, useTermStats } from './useTermStats';
@@ -165,6 +166,32 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string, acti
 
   const pct = (a: number, b: number) => (b ? Math.round((a / b) * 1000) / 10 : null);
 
+  /** The overview as a paper report: figures, each arm, each subject, who needs attention. */
+  const printOverview = () => {
+    if (!s) return;
+    printDoc(
+      `Overview, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`,
+      overviewDoc({
+        termLabel: `${term?.name ?? 'This term'}${term?.session ? `, ${term.session}` : ''}`,
+        beforeLabel: two ? series[1].name : null,
+        s,
+        before: two ? before : null,
+        todayPct: viewingPast ? null : todayPct,
+        arms: peopled.map((c) => {
+          const f = feeByArm.find((x) => x.c.id === c.id);
+          const comp = completion.find((x) => x.c.id === c.id);
+          return { id: c.id, name: c.name, students: byClass(c.id).length, scores: comp?.scores ?? null, comments: comp?.comments ?? null, fees: f ? pct(f.paid, f.total) : null, owing: f?.owing ?? 0 };
+        }),
+        subjects,
+        risks: risks.map((r) => ({ name: r.name, arm: armName(r.classId), reasons: r.reasons })),
+        waiting: waiting.length,
+        unstaffed,
+        noForm,
+        brief: brief && !brief.busy && brief.q === BRIEF_Q ? brief.a : undefined,
+      }),
+    );
+  };
+
   /** Everything on the overview as a spreadsheet: headline figures, each arm, each subject, who needs attention. */
   const exportRows = (): Cell[][] => {
     const p = (v: number | null | undefined) => (v === null || v === undefined ? '' : `${v}%`);
@@ -202,7 +229,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string, acti
     <div className="page dashboard">
       {greeting(
         `${school.name}: ${active.length} students in ${classes.length} arms, ${members.length} staff.`,
-        <PrintExport title={`Overview, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`} rows={exportRows} printLabel="Print overview" />,
+        <PrintExport title={`Overview, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`} rows={exportRows} onPrint={printOverview} printLabel="Print overview" />,
       )}
 
       <section className="panel brief" ref={briefRef} aria-live="polite">

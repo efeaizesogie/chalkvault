@@ -61,7 +61,6 @@ export function StaffPage() {
         </div>
         <PrintExport
           title="Staff list"
-          target={() => [document.querySelector<HTMLElement>('.staff-panel')]}
           rows={() => [
             ['Name', 'Role', 'Email', 'Form class', 'Subjects taught'],
             ...sorted.map((m) => [

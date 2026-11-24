@@ -4,7 +4,7 @@
 #print-root { display: none; }
 
 @media print {
-  @page { size: A4; margin: 14mm 12mm 18mm; }
+  /* Page size and margin footer are set per print by lib/print.ts. */
   html, body { background: var(--sheet) !important; }
   * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
 
@@ -30,8 +30,8 @@
   .ph-doc b { font-weight: 600; font-size: 13px; }
   .ph-doc span { font-size: 11px; color: var(--print-ink-2); }
 
-  /* Footer on every page */
-  .pf-foot { position: fixed; bottom: -10mm; left: 0; right: 0; display: flex; gap: 6px; align-items: center; justify-content: center; font-size: 10px; color: var(--print-ink-2); }
+  .ph-cv { display: inline-flex; gap: 4px; align-items: center; justify-content: flex-end; font-size: 10px; color: var(--print-ink-2); }
+  .ph-cv svg { width: 12px; height: 12px; }
 
   /* What gets printed: plain, ink on paper. */
   #print-root .pf-part { margin: 0 0 14px; }
@@ -65,11 +65,53 @@
   #print-root .slips { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
   #print-root .slip-card { break-inside: avoid; }
 }
-/* Wide documents (timetables, broadsheets) print on landscape pages. */
-@media print {
-  @page wide { size: A4 landscape; margin: 12mm 10mm 16mm; }
-  #print-root.landscape { page: wide; }
-}
 
 @media print { #print-root .print-only { display: block; } }
 @media print { #print-root .print-only.report-card { display: none !important; } }
+
+/* Purpose-built documents (lib/printDocs.ts): laid out for paper, not copied from the screen. */
+@media print {
+  #print-root .doc { font-size: 11px; line-height: 1.4; }
+  .doc h1 { font: 400 22px/1.2 var(--serif); margin: 0 0 2px; }
+  .doc .doc-sub { color: var(--print-ink-2); margin: 0 0 12px; }
+  .doc h2 { font: 600 12px/1.3 var(--sans); margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--ink); break-after: avoid; }
+  .doc section { break-inside: avoid; }
+  .doc .doc-kpis { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border: 1px solid var(--ink); }
+  .doc .doc-kpis > div { padding: 8px 10px; border-right: 1px solid var(--print-rule); display: grid; gap: 2px; }
+  .doc .doc-kpis > div:last-child { border-right: 0; }
+  .doc .doc-kpis span { color: var(--print-ink-2); font-size: 10px; }
+  .doc .doc-kpis b { font: 400 20px/1.1 var(--serif); }
+  .doc .doc-kpis i { font-style: normal; font-size: 10px; }
+  .doc .up { color: var(--good); }
+  .doc .down { color: var(--danger); }
+  .doc table { width: 100%; border-collapse: collapse; font-size: 10.5px; }
+  .doc th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--ink); padding: 4px 5px; white-space: nowrap; }
+  .doc td { border-bottom: 1px solid var(--print-rule); padding: 3px 5px; vertical-align: middle; }
+  .doc tbody tr:nth-child(even) td { background: var(--paper); }
+  .doc td.num, .doc th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  .doc .bar { display: inline-block; width: 60px; height: 6px; background: var(--paper-2); border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+  .doc .bar i { display: block; height: 100%; background: var(--series-now); border-radius: 0 3px 3px 0; }
+  .doc .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+  .doc .note { color: var(--print-ink-2); font-size: 10px; margin: 4px 0 0; }
+  .doc .spark { width: 100%; height: 90px; }
+  .doc .spark .now { fill: none; stroke: var(--series-now); stroke-width: 2; }
+  .doc .spark .before { fill: none; stroke: var(--series-before); stroke-width: 2; }
+  .doc .spark text { font: 9px sans-serif; fill: var(--print-ink-2); }
+  .doc .spark line { stroke: var(--print-rule); }
+  .doc .key { display: flex; gap: 12px; font-size: 10px; color: var(--print-ink-2); }
+  .doc .key i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: -1px; }
+  .doc .brief p, .doc .brief li { margin: 0 0 4px; }
+  /* Timetable: one arm per landscape page. */
+  .doc .tt-page { break-after: page; }
+  .doc .tt-page:last-child { break-after: auto; }
+  .doc .tt-page h1 { margin-bottom: 0; }
+  .doc table.tt { table-layout: fixed; font-size: 10px; }
+  .doc table.tt th, .doc table.tt td { border: 1px solid var(--print-rule); padding: 5px 6px; text-align: left; vertical-align: top; height: 38px; }
+  .doc table.tt thead th { background: var(--paper-2); height: auto; }
+  .doc table.tt th.time { width: 80px; font-weight: 600; }
+  .doc table.tt th.time small { display: block; font-weight: 400; color: var(--print-ink-2); }
+  .doc table.tt td b { display: block; font-weight: 600; }
+  .doc table.tt td small { color: var(--print-ink-2); }
+  .doc table.tt td.free { color: var(--print-ink-2); background: var(--sheet); }
+  .doc table.tt tr.brk td, .doc table.tt tr.brk th { height: auto; background: var(--paper); text-align: center; color: var(--print-ink-2); padding: 3px; }
+}

@@ -41,7 +41,7 @@ function letterheadHtml(title: string) {
       ${head.motto ? `<i>${esc(head.motto)}</i>` : ''}
       ${contact ? `<span>${contact}</span>` : ''}
     </div>
-    <div class="ph-doc"><b>${esc(title)}</b><span>${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span></div>
+    <div class="ph-doc"><b>${esc(title)}</b><span>${new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })}</span><span class="ph-cv">${ICON} Chalkvault</span></div>
   </header>`;
 }
 
@@ -70,38 +70,55 @@ function flatten(src: HTMLElement, copy: HTMLElement) {
  * Print one part of the page (or several) under the letterhead.
  * `title` names the document and becomes the PDF's file name; `letterhead: false` is for report cards, which carry their own.
  */
-export function printParts(parts: (HTMLElement | null | undefined)[], opts: { title: string; letterhead?: boolean; landscape?: boolean }) {
-  const nodes = parts.filter((p): p is HTMLElement => !!p);
+export function printParts(parts: (HTMLElement | string | null | undefined)[], opts: { title: string; letterhead?: boolean; landscape?: boolean }) {
+  const nodes = parts.filter((p): p is HTMLElement | string => !!p);
   if (!nodes.length) return;
   document.getElementById('print-root')?.remove();
+  document.getElementById('print-page')?.remove();
   const root = document.createElement('div');
   root.id = 'print-root';
-  if (opts.landscape) root.classList.add('landscape');
   root.innerHTML = opts.letterhead === false ? '' : letterheadHtml(opts.title);
   for (const n of nodes) {
+    if (typeof n === 'string') {
+      // A purpose-built document (see printDoc).
+      const box = document.createElement('div');
+      box.className = 'pf-part doc';
+      box.innerHTML = n;
+      root.appendChild(box);
+      continue;
+    }
     const copy = n.cloneNode(true) as HTMLElement;
     flatten(n, copy);
     copy.classList.add('pf-part');
     root.appendChild(copy);
   }
-  const foot = document.createElement('footer');
-  foot.className = 'pf-foot';
-  foot.innerHTML = `${ICON}<span>Printed from Chalkvault${head ? ` for ${esc(head.name)}` : ''}</span>`;
-  root.appendChild(foot);
   document.body.appendChild(root);
+  // Page size and a footer in the page margin (it can't overlap content there), set per print.
+  const page = document.createElement('style');
+  page.id = 'print-page';
+  const who = head ? `Printed from Chalkvault for ${head.name.replace(/["\\]/g, '')}` : 'Printed from Chalkvault';
+  page.textContent = `@media print { @page { size: A4 ${opts.landscape ? 'landscape' : 'portrait'}; margin: ${opts.landscape ? '10mm 10mm 14mm' : '14mm 12mm 16mm'};
+    @bottom-left { content: "${who}"; font: 9px sans-serif; color: #777b86; }
+    @bottom-right { content: "Page " counter(page) " of " counter(pages); font: 9px sans-serif; color: #777b86; } } }`;
+  document.head.appendChild(page);
   document.body.classList.add('printing');
-  if (opts.landscape) document.body.classList.add('printing-landscape');
   const before = document.title;
   document.title = `${head?.name ? `${head.name} - ` : ''}${opts.title}`;
   const done = () => {
     document.title = before;
-    document.body.classList.remove('printing', 'printing-landscape');
+    document.body.classList.remove('printing');
     root.remove();
+    page.remove();
     window.removeEventListener('afterprint', done);
   };
   window.addEventListener('afterprint', done);
   // Let images (the crest) load before the print dialog opens.
-  setTimeout(() => window.print(), 60);
+  setTimeout(() => window.print(), 80);
+}
+
+/** Print a purpose-built document (HTML from one of the builders in printDocs.ts) under the letterhead. */
+export function printDoc(title: string, html: string, opts: { landscape?: boolean; letterhead?: boolean } = {}) {
+  printParts([html], { title, ...opts });
 }
 
 /** Print the current page's main content. */

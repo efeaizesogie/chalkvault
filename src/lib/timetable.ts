@@ -68,7 +68,10 @@ interface Job {
  * Build a weekly timetable. Deterministic: the same inputs always give the same
  * result. Fast enough for 30 arms × 12 subjects in well under a second.
  */
-export function generateTimetable(settings: TimetableSettings, classes: ClassRoom[], offerings: Offering[]): GenerateResult {
+export function generateTimetable(settings: TimetableSettings, classes: ClassRoom[], offerings: Offering[], seed = Date.now()): GenerateResult {
+  // Seeded randomness: each generation spreads lessons differently, and the same seed gives the same week.
+  let x = seed >>> 0 || 1;
+  const rand = () => ((x = (x * 1664525 + 1013904223) >>> 0) / 2 ** 32);
   const days = settings.days.length;
   const tIdx = teachingPeriods(settings);
   const classIds = new Set(classes.map((c) => c.id));
@@ -109,6 +112,13 @@ export function generateTimetable(settings: TimetableSettings, classes: ClassRoo
       for (const t of j.teacherIds) teacherSlot.delete(tKey(t, d, p));
       count.set(j.offeringId, (count.get(j.offeringId) ?? 1) - 1);
     };
+    // How many days this arm already has a lesson in period p: spreading these spreads the free periods too.
+    const armPeriodLoad = (classId: string, p: number) => {
+      let n = 0;
+      for (let d = 0; d < days; d++) if (armHas(classId, d, p)) n++;
+      return n;
+    };
+    const jitter = new Map<string, number>();
     const armDayLoad = (classId: string, d: number) => {
       let n = 0;
       for (const p of tIdx) if (armHas(classId, d, p)) n++;
@@ -125,7 +135,10 @@ export function generateTimetable(settings: TimetableSettings, classes: ClassRoo
           const c = cells[(ci + offset * 7) % cells.length];
           if (!freeFor(j, c.day, c.period)) continue;
           const sameDay = daysUsed.includes(c.day) ? 1 : 0;
-          const score = sameDay * 1000 + armDayLoad(j.classId, c.day) * 10 + c.period;
+          // Avoid the same subject twice a day, keep days even, use each period evenly across the week, then a little chance.
+          const jk = `${j.classId}|${c.day}:${c.period}`;
+          if (!jitter.has(jk)) jitter.set(jk, rand());
+          const score = sameDay * 1000 + armDayLoad(j.classId, c.day) * 10 + armPeriodLoad(j.classId, c.period) * 6 + jitter.get(jk)! * 8;
           if (score < bestScore) {
             bestScore = score;
             best = c;

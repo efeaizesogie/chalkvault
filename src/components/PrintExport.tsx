@@ -1,4 +1,5 @@
-import { downloadCsv, printParts, tableRows, type Cell } from '../lib/print';
+import { downloadCsv, printDoc, printParts, tableRows, type Cell } from '../lib/print';
+import { tableDoc } from '../lib/printDocs';
 
 /**
  * Print and Export buttons for a page head. Print uses the school's letterhead; Export downloads a CSV that
@@ -8,6 +9,7 @@ export function PrintExport({
   title,
   rows,
   target,
+  onPrint,
   landscape,
   printLabel = 'Print',
   exportLabel = 'Export CSV',
@@ -16,13 +18,16 @@ export function PrintExport({
   title: string;
   rows?: () => Cell[][] | Promise<Cell[][]>;
   target?: () => (HTMLElement | null)[];
+  /** A purpose-built print instead of the page as it is on screen. */
+  onPrint?: () => void;
   landscape?: boolean;
   printLabel?: string;
   exportLabel?: string;
   /** Export the first table on the page when no rows are given. */
   fromTable?: boolean;
 }) {
-  const doPrint = () => printParts(target ? target() : [document.querySelector<HTMLElement>('.ws-main .page')], { title, landscape });
+  // With export rows and no custom print, print those rows as a tidy document rather than the screen.
+  const doPrint = async () => onPrint ? onPrint() : rows && !target ? printDoc(title, tableDoc(title, await rows()), { landscape }) : printParts(target ? target() : [document.querySelector<HTMLElement>('.ws-main .page')], { title, landscape });
   const doExport = async () => {
     const data = rows ? await rows() : tableRows(document.querySelector<HTMLTableElement>('.ws-main table'));
     if (data.length) downloadCsv(title, data);
