@@ -458,6 +458,129 @@ export async function mapColumns(headers: string[], columns: { key: string; labe
   };
 }
 
+// ---------- Ask Chalkvault: questions about the school, answered from figures compiled in the browser ----------
+
+let askModel: GenerativeModel | null = null;
+
+/**
+ * Answer a staff question from a brief of school figures built in the browser.
+ * On-device (PREFER_ON_DEVICE, Nano available): the brief keeps real names and nothing leaves the computer.
+ * Cloud fallback: every student name becomes a code like [S7] before sending, and is put back locally as the
+ * answer streams in.
+ */
+export async function askSchool(opts: {
+  question: string;
+  brief: string;
+  names: string[];
+  history: { q: string; a: string }[];
+  allowCloud: boolean;
+  onText: (soFar: string, source: Source) => void;
+}) {
+  const local = (await deviceStatus()) === 'available';
+  if (!local && !opts.allowCloud) throw new PrivacyBlock('Gemini Nano isn’t ready on this computer, and cloud help is switched off.');
+  askModel ??= getGenerativeModel(ai(), {
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] } },
+    inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { temperature: 0.2 } },
+  });
+
+  // Codes for names, longest first so "Ada Obi" is replaced before "Ada".
+  const codes = new Map<string, string>();
+  [...new Set(opts.names)].sort((a, b) => b.length - a.length).forEach((n, i) => codes.set(n, `[S${i + 1}]`));
+  const hide = (t: string) => {
+    if (local) return t;
+    let out = t;
+    for (const [n, c] of codes) out = out.split(n).join(c);
+    return out;
+  };
+  const show = (t: string) => {
+    if (local) return t;
+    let out = t;
+    for (const [n, c] of codes) out = out.split(c).join(n);
+    return out;
+  };
+
+  const brief = hide(opts.brief).slice(0, 18000); // stays well inside Gemini Nano's 9,216-token window
+  const history = opts.history.slice(-2).map((h) => `Earlier question: ${hide(h.q)}\nEarlier answer: ${hide(h.a).slice(0, 600)}`).join('\n');
+  const prompt = [
+    'You are Chalkvault, an assistant for staff at a school. Answer the question using ONLY the school figures below.',
+    'Be brief and specific: lead with the answer, then up to 5 short lines or bullet points. Name students and classes exactly as written. If the figures do not contain the answer, say what is missing. Never invent numbers.',
+    local ? '' : 'Students appear as codes like [S3]; refer to them by the same codes.',
+    `School figures:\n${brief}`,
+    history,
+    `Question: ${hide(opts.question)}`,
+  ]
+    .filter(Boolean)
+    .join('\n\n');
+
+  const t0 = performance.now();
+  const res = await askModel.generateContentStream(prompt);
+  let text = '';
+  const source: Source = local ? 'on_device' : 'in_cloud';
+  for await (const chunk of res.stream) {
+    text += chunk.text();
+    opts.onText(show(text), source);
+  }
+  const final = await res.response;
+  const actual: Source = final.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device';
+  return { answer: show(text), source: actual, sent: actual === 'in_cloud' ? prompt : '', ms: performance.now() - t0 };
+}
+
+// ---------- Payment receipts: on-device by default ----------
+
+export interface ReadReceipt {
+  payerName: string;
+  amount: number;
+  date: string;
+  reference: string;
+  bank: string;
+  narration: string;
+}
+
+/**
+ * Read a bank teller, transfer screenshot or POS slip. ONLY_ON_DEVICE, because receipts carry
+ * parents' names and account details. The cloud is used only if the school allowed cloud scanning.
+ */
+export async function readReceipt(image: { base64: string; mimeType: 'image/jpeg' | 'image/png' }, allowCloud: boolean) {
+  const local = (await deviceStatus()) === 'available';
+  if (!local && !allowCloud) {
+    throw new PrivacyBlock('Reading a receipt needs Gemini Nano on this computer, because receipts show parents’ names and account details. An admin can allow cloud reading in Settings.');
+  }
+  const schema = {
+    type: 'object',
+    properties: {
+      payerName: { type: 'string', description: 'Name of the person or account that paid.' },
+      amount: { type: 'number', description: 'Amount paid in naira, digits only.' },
+      date: { type: 'string', description: 'Payment date as YYYY-MM-DD, or empty.' },
+      reference: { type: 'string', description: 'Transaction reference or session ID, or empty.' },
+      bank: { type: 'string', description: 'Bank or channel, or empty.' },
+      narration: { type: 'string', description: 'Narration or description text, often the child’s name or class.' },
+    },
+    required: ['payerName', 'amount', 'date', 'reference', 'bank', 'narration'],
+  };
+  const m = getGenerativeModel(ai(), local
+    ? { mode: InferenceMode.ONLY_ON_DEVICE, onDeviceParams: { createOptions, promptOptions: { responseConstraint: schema } } }
+    : { mode: InferenceMode.ONLY_IN_CLOUD, inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { responseMimeType: 'application/json', temperature: 0 } } });
+  const t0 = performance.now();
+  const res = await m.generateContent([
+    { type: 'text', text: 'This is a photo or screenshot of a school-fees payment: a bank teller, transfer receipt or POS slip from a Nigerian bank. Read the payer, the amount in naira, the date, the reference, the bank and the narration. Return JSON. Leave a field empty if it is not visible; never guess.' },
+    { type: 'inlineData', inlineData: { data: image.base64, mimeType: image.mimeType } },
+  ]);
+  const o = JSON.parse(res.response.text().trim().replace(/^```(?:json)?|```$/g, '')) as Partial<ReadReceipt>;
+  return {
+    receipt: {
+      payerName: String(o.payerName ?? ''),
+      amount: Number(String(o.amount ?? '').replace(/[^\d.]/g, '')) || 0,
+      date: /^\d{4}-\d{2}-\d{2}$/.test(String(o.date ?? '')) ? String(o.date) : '',
+      reference: String(o.reference ?? ''),
+      bank: String(o.bank ?? ''),
+      narration: String(o.narration ?? ''),
+    },
+    source: (local ? 'on_device' : 'in_cloud') as Source,
+    ms: performance.now() - t0,
+  };
+}
+
 // ---------- Short remarks (subject teacher, principal): hybrid, never given a name ----------
 
 let remarkModel: GenerativeModel | null = null;

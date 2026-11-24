@@ -1,0 +1,19 @@
+.fee-tabs { border: 1px solid var(--ink); border-radius: 9999px; padding: 4px; background: var(--sheet); align-self: start; }
+.fee-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+.gradebook td.owing { color: var(--danger); font-weight: 600; }
+.invoice-sheet .rc-table th { font-weight: 400; }
+.inv-total th, .inv-total td { font-weight: 600 !important; border-top: 2px solid var(--ink); }
+.invoice-head { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.small-h { font-size: 16px; margin: 0; }
+.chosen { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+.pick-list { list-style: none; margin: 4px 0 0; padding: 0; border: 1px solid var(--rule); border-radius: 12px; background: var(--sheet); }
+.pick-list li { padding: 8px 12px; border-bottom: 1px solid var(--rule); }
+.pick-list li:last-child { border-bottom: 0; }
+.receipt { border-style: dashed; }
+@media (max-width: 820px) {
+  .fee-split { grid-template-columns: 1fr; }
+  .fee-tabs { border-radius: 16px; }
+}
+@media print {
+  .fee-tabs, .no-print, .fee-split > .panel:first-child { display: none !important; }
+}

@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { query, where } from 'firebase/firestore';
 import { paths } from '../data/api';
 import { useQuery } from '../data/hooks';
-import type { AttendanceDay, Mark, StudentProfile, SubjectRecord, TermRecord } from '../data/types';
+import type { AttendanceDay, Mark, ReportCard, StudentProfile, SubjectRecord, TermRecord } from '../data/types';
 import { assessmentsOf, bandsOf } from '../lib/results';
 import { compileArm } from '../lib/reportCards';
 import { useSchool } from './SchoolContext';
@@ -61,7 +61,7 @@ export function useArm(classId: string, enabled = true) {
             bands: bandsOf(school),
             policy,
           })
-        : new Map(),
+        : new Map<string, ReportCard>(),
     [cls, term, sortedStudents, armOfferings, subjectRecords.data, formRecords.data, days, school, policy],
   );
 
