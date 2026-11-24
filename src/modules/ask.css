@@ -1,3 +1,5 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: module screens reuse the app system (panels, ruled tables, one ticket per screen); only layout specific to this module lives here */
 .ask { max-width: 920px; }
 .ask-thread { display: grid; gap: 20px; }
 .ask-suggest { display: flex; flex-wrap: wrap; gap: 8px; }

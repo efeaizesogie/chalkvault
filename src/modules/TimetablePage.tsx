@@ -184,7 +184,7 @@ export function TimetablePage() {
 
           <div className="tt-print-area">
             <p className="tt-print-title">
-              {school.name} — {mode === 'class' ? classes.find((c) => c.id === armId)?.name ?? 'Timetable' : nameOf(teacherId)}
+              {school.name}: {mode === 'class' ? classes.find((c) => c.id === armId)?.name ?? 'Timetable' : nameOf(teacherId)}
             </p>
             {mode === 'class' ? (
               <ClassGrid settings={timetable.settings} slots={timetable.slots[armId] ?? []} offeringById={offeringById} teacherLabel={teacherLabel} />
@@ -280,7 +280,7 @@ function ClassGrid({
                 <th scope="row" className="tt-time">
                   <span className="tt-plabel">{p.label}</span>
                   <span className="tt-prange">
-                    {p.start}–{p.end}
+                    {p.start} to {p.end}
                   </span>
                 </th>
                 {settings.days.map((_, di) => {
@@ -294,7 +294,7 @@ function ClassGrid({
                           <span className="tt-cell-teacher">{teacherLabel(o)}</span>
                         </>
                       ) : (
-                        <span className="tt-empty-cell">—</span>
+                        <span className="tt-empty-cell">Free</span>
                       )}
                     </td>
                   );
@@ -362,7 +362,7 @@ function TeacherGrid({
                 <th scope="row" className="tt-time">
                   <span className="tt-plabel">{p.label}</span>
                   <span className="tt-prange">
-                    {p.start}–{p.end}
+                    {p.start} to {p.end}
                   </span>
                 </th>
                 {settings.days.map((_, di) => {
@@ -375,7 +375,7 @@ function TeacherGrid({
                           <span className="tt-cell-teacher">{cell.arm}</span>
                         </>
                       ) : (
-                        <span className="tt-empty-cell">—</span>
+                        <span className="tt-empty-cell">Free</span>
                       )}
                     </td>
                   );

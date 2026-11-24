@@ -1,3 +1,5 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: module screens reuse the app system (panels, ruled tables, one ticket per screen); only layout specific to this module lives here */
 .fee-tabs { border: 1px solid var(--ink); border-radius: 9999px; padding: 4px; background: var(--sheet); align-self: start; }
 .fee-split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
 .gradebook td.owing { color: var(--danger); font-weight: 600; }

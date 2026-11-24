@@ -85,7 +85,14 @@ export function MessagesPage() {
       await ws.log({ task: 'Parent message draft', source: base.source, charsSent: base.source === 'in_cloud' ? base.prompt.length : 0, detail: base.source === 'in_cloud' ? base.prompt : 'Written by Gemini Nano on this device.' });
       for (const lang of languages.filter((l) => l !== 'English')) {
         setBusy(`Translating into ${lang}…`);
-        const t = await translateMessage(base.text, lang);
+        // A translation must keep exactly the same placeholders, or a name or amount could land in the wrong place.
+        const sig = (s: string) => (s.match(/\[[A-Z]+\]/g) ?? []).sort().join();
+        let t = await translateMessage(base.text, lang);
+        if (sig(t.text) !== sig(base.text)) t = await translateMessage(base.text, lang);
+        if (sig(t.text) !== sig(base.text)) {
+          toast(`The ${lang} version didn’t keep the names and amounts in place, so those parents will get the English message.`, 'warn');
+          continue;
+        }
         out[lang] = { text: t.text, source: t.source };
         await ws.log({ task: `Parent message (${lang})`, source: t.source, charsSent: t.source === 'in_cloud' ? t.prompt.length : 0, detail: t.source === 'in_cloud' ? `A template with placeholders, no names:\n${t.prompt}` : 'Translated by Gemini Nano on this device.' });
       }

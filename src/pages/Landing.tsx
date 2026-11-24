@@ -15,7 +15,12 @@ const FEATURES: { title: string; body: string; soon?: boolean }[] = [
   { title: 'Parents in their own language', body: 'French and Spanish are translated on the laptop. Yoruba, Hausa, Igbo and more go to the cloud with names removed. Share on WhatsApp.' },
   { title: 'Students who need follow-up', body: 'As each comment is written, the AI flags academic, attendance or wellbeing concerns for the head teacher.' },
   { title: 'An audit ledger', body: 'Every AI request is logged: where it ran, and exactly what, if anything, left the device.' },
-  { title: 'Fees, timetable and Google Drive', body: 'Fee tracking, timetables and importing CBT results straight from Google Drive.', soon: true },
+  { title: 'Ask Chalkvault', body: 'Ask “Who is failing two subjects?” or “Which arm has the lowest attendance?” and get an answer from your own records, written on the laptop.' },
+  { title: 'Fees the way you charge them', body: 'Class fees, optional levies, sibling, staff and scholarship discounts, part payments and arrears. Photograph a bank teller and Gemini Nano fills in the payment.' },
+  { title: 'Messages in every family’s language', body: 'Absence alerts, fee reminders and results notices in English, Yoruba, Hausa, Igbo and more, sent by WhatsApp or SMS.' },
+  { title: 'Lesson notes and quizzes', body: 'Lesson notes in the scheme-of-work format and quizzes you can print or load into your CBT system.' },
+  { title: 'Admissions, timetable and the rest', body: 'Online applications, a clash-free timetable, behaviour log, library, transport, inventory, staff leave, alumni and promotion to the next session.' },
+  { title: 'Google Drive import', body: 'Pull CBT results straight from Google Drive.', soon: true },
 ];
 
 const FAQ: { q: string; a: string }[] = [

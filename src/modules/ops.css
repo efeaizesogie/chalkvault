@@ -1,3 +1,5 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: module screens reuse the app system (panels, ruled tables, one ticket per screen); only layout specific to this module lives here */
 /* Shared styles for the operations screens: library, transport, inventory, leave, alumni. */
 
 /* Student search results */
@@ -68,7 +70,7 @@
   color: var(--ink);
 }
 .ops-adjust button:hover:not(:disabled) { background: var(--paper-2); }
-.ops-adjust button:disabled { opacity: 0.4; cursor: default; }
+.ops-adjust button:disabled { background: var(--paper-2); color: var(--muted); border-color: var(--rule); cursor: not-allowed; }
 
 /* Grouped sections (alumni by session) */
 .ops-group { display: grid; gap: 10px; margin-bottom: 8px; }

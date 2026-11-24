@@ -27,6 +27,27 @@ Chalkvault is now a multi-school records system. Each school registers its own p
 
 The research behind these choices is in [RESEARCH.md](RESEARCH.md).
 
+### v3: the rest of a school system ([FEATURES-GAP.md](FEATURES-GAP.md))
+- **Ask Chalkvault:** staff ask questions about attendance, results, fees and follow-ups.
+  - Figures are compiled in the browser.
+  - Gemini Nano streams the answer on-device (`PREFER_ON_DEVICE`, `generateContentStream`).
+  - On the cloud path, every first name, surname and full name becomes a code like `[S7]` and is restored locally.
+- **Fees:**
+  - fee items per class, optional levies
+  - sibling, staff and scholarship discounts
+  - part payments, arrears carried across terms, receipts
+  - collection dashboard and a **bursar** role
+  - **Receipt photo reading:** `ONLY_ON_DEVICE` image to JSON for teller, transfer and POS slips.
+- **Messages to parents:**
+  - Absence, fees, results and custom messages.
+  - One placeholder template (no names, `PREFER_ON_DEVICE`) is translated per family language: on-device for fr/es/de/ja via `expectedOutputs`, cloud for Yoruba, Hausa and Igbo. Translations are checked to keep every placeholder.
+  - Names and amounts are filled in locally; sent by WhatsApp or SMS CSV.
+- **Lesson notes** (streamed) and **quizzes** (structured JSON with `responseConstraint` on-device), with CBT CSV export.
+- **Admissions:** public application form and accept-and-enrol.
+- **Timetable:** clash-free generator.
+- **Records and operations:** behaviour and health log, library, transport, inventory, staff leave, alumni, end-of-session promotion.
+- **Data and devices:** full data export, installable web app.
+
 ### v2: run the way Nigerian schools run ([PLAN-v2.md](PLAN-v2.md))
 - **Classes, arms and subjects:** JSS 1A, JSS 1B…, each with subject offerings. Electives can have chosen students.
 - **Form teachers and subject teachers:** each subject teacher sees only their subjects and those students. Enforced in `firestore.rules`.

@@ -1,3 +1,5 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: module screens reuse the app system (panels, ruled tables, one ticket per screen); only layout specific to this module lives here */
 .template-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
 .template-list li { border: 1px solid var(--rule); border-radius: 12px; padding: 10px 12px; background: var(--paper); display: grid; gap: 4px; }
 .template-list p { margin: 0; font: 400 16px/1.5 var(--serif); }

@@ -1,3 +1,5 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: module screens reuse the app system (panels, ruled tables, one ticket per screen); only layout specific to this module lives here */
 .lesson-notes { width: 100%; border: 1px solid var(--rule); border-radius: 12px; padding: 12px 14px; font: 400 16px/1.6 var(--serif); background: var(--paper); resize: vertical; }
 .lesson-text { white-space: pre-wrap; font: 400 16px/1.6 var(--serif); }
 .quiz-edit { margin: 0; padding-left: 20px; display: grid; gap: 14px; }
