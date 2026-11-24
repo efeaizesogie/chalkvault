@@ -100,6 +100,50 @@ export function ReportCardView(props: {
         </table>
       </div>
 
+      {c.cumulative && (
+        <div className="rc-table-wrap">
+          <table className="rc-table rc-cumulative">
+            <caption>Cumulative result for the session</caption>
+            <thead>
+              <tr>
+                <th scope="col">Subject</th>
+                {c.cumulative.termNames.map((t) => (
+                  <th key={t} scope="col" className="num">
+                    {t} %
+                  </th>
+                ))}
+                <th scope="col" className="num">Average %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {c.cumulative.subjects.map((s) => (
+                <tr key={s.subject}>
+                  <th scope="row">{s.subject}</th>
+                  {s.totals.map((v, i) => (
+                    <td key={i} className="num">
+                      {v ?? ''}
+                    </td>
+                  ))}
+                  <td className="num rc-total">{s.average}</td>
+                </tr>
+              ))}
+            </tbody>
+            <tfoot>
+              <tr>
+                <th scope="row" colSpan={c.cumulative.termNames.length + 1}>
+                  Cumulative average
+                </th>
+                <td className="num rc-total">{c.cumulative.average}</td>
+              </tr>
+            </tfoot>
+          </table>
+          <p className="rc-decision">
+            {c.cumulative.passes ? <b>Promoted to the next class.</b> : <b>Promotion under review.</b>}
+            {!c.cumulative.passes && ` The school’s rule was not met: ${c.cumulative.reasons.join('; ')}.`}
+          </p>
+        </div>
+      )}
+
       <section className="rc-comments">
         <div>
           <h3>Form teacher’s comment</h3>

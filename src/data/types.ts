@@ -31,6 +31,11 @@ export interface SchoolPolicy {
   cloudScanning: boolean;
   /** Allow comments to be written in the cloud (names removed) when on-device AI is unavailable. */
   cloudCommentFallback: boolean;
+  /** Promotion rule: the overall cumulative average a student needs to move up. */
+  passMark: number;
+  /** Subjects a student must pass at the credit mark to move up (e.g. English and Mathematics). */
+  creditSubjects: string[];
+  creditMark: number;
 }
 
 export const DEFAULT_POLICY: SchoolPolicy = {
@@ -42,6 +47,9 @@ export const DEFAULT_POLICY: SchoolPolicy = {
   showPositions: true,
   cloudScanning: false,
   cloudCommentFallback: true,
+  passMark: 50,
+  creditSubjects: ['English Language', 'Mathematics'],
+  creditMark: 50,
 };
 
 export interface School {
@@ -308,6 +316,8 @@ export interface ReportCard {
   principalComment?: string;
   nextTermBegins?: string;
   gradeKey: { grade: string; min: number; remark: string }[];
+  /** Third term: each subject across the session's terms, and the promotion decision. */
+  cumulative?: { termNames: string[]; subjects: { subject: string; totals: (number | null)[]; average: number }[]; average: number; passes: boolean; reasons: string[] };
   publishedAt?: number;
 }
 

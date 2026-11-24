@@ -396,3 +396,9 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .check-list li.todo .mono { color: var(--danger); }
 .check-list li.ok .mono { color: var(--good); }
 .setup { display: grid; gap: 10px; }
+
+.rc-cumulative caption { text-align: left; font: 600 15px/1.4 var(--serif); padding: 12px 0 6px; }
+.rc-decision { margin: 8px 0 0; }
+.promo-review { display: grid; gap: 8px; padding: 14px; border-radius: 14px; background: var(--paper); }
+.h4 { font: 600 16px/1.35 var(--sans); margin: 0; }
+.check { display: inline-flex; gap: 8px; align-items: center; }

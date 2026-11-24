@@ -1,9 +1,11 @@
 import { useMemo, useState } from 'react';
-import { getDoc, getDocs, writeBatch } from 'firebase/firestore';
+import { getDoc, getDocs, query, where, writeBatch } from 'firebase/firestore';
 import { mod, paths, type ModuleName } from '../data/api';
 import { getDb } from '../lib/firebase';
 import { useQuery } from '../data/hooks';
-import type { StudentProfile } from '../data/types';
+import type { StudentProfile, SubjectRecord } from '../data/types';
+import { cumulativeFor, sessionTermsUpTo } from '../lib/cumulative';
+import { assessmentsOf } from '../lib/results';
 import { download } from '../lib/export';
 import { friendlyError } from '../lib/errors';
 import { useToast } from '../ui/toast';
@@ -13,10 +15,23 @@ const MODULES: ModuleName[] = ['feeItems', 'invoices', 'payments', 'messages', '
 
 /** End-of-session promotion and full data export (Settings, admins only). */
 export function SessionTools() {
-  const { schoolId, school, classes, term } = useSchool();
+  const { schoolId, school, classes, term, terms, policy } = useSchool();
   const toast = useToast();
   const students = useQuery<StudentProfile>(paths.students(schoolId), `promo-st:${schoolId}`);
   const active = students.data.filter((s) => (s.status ?? 'active') === 'active');
+  // The promotion rule, from the session's cumulative results.
+  const sessionTerms = useMemo(() => sessionTermsUpTo(terms, term), [terms, term]);
+  const sessionRecs = useQuery<SubjectRecord>(sessionTerms.length ? query(paths.subjectRecords(schoolId), where('termId', 'in', sessionTerms.map((t) => t.id).slice(0, 10))) : null, `promo-sr:${sessionTerms.map((t) => t.id).join(',')}`);
+  const review = useMemo(
+    () =>
+      active
+        .map((s) => ({ s, cum: cumulativeFor(s.id, sessionTerms, sessionRecs.data, assessmentsOf(school), policy) }))
+        .filter((x) => x.cum && !x.cum.passes)
+        .sort((a, b) => a.s.classId.localeCompare(b.s.classId) || a.s.name.localeCompare(b.s.name)),
+    [active, sessionTerms, sessionRecs.data, school, policy],
+  );
+  const [repeat, setRepeat] = useState<Record<string, boolean>>({});
+  const repeats = (id: string) => repeat[id] ?? true;
 
   // Default plan: each arm moves to the next level's arm with the same arm name; the final level graduates.
   const defaults = useMemo(() => {
@@ -34,13 +49,14 @@ export function SessionTools() {
   const [busy, setBusy] = useState(false);
 
   const promote = async () => {
-    const graduating = active.filter((s) => dest(s.classId) === 'graduate').length;
-    const moving = active.filter((s) => !['stay', 'graduate'].includes(dest(s.classId))).length;
-    if (!confirm(`Promote ${moving} students to their next class and graduate ${graduating}? Do this once, at the end of the session, after report cards are published.`)) return;
+    const held = new Set(review.filter((r) => repeats(r.s.id)).map((r) => r.s.id));
+    const graduating = active.filter((s) => !held.has(s.id) && dest(s.classId) === 'graduate').length;
+    const moving = active.filter((s) => !held.has(s.id) && !['stay', 'graduate'].includes(dest(s.classId))).length;
+    if (!confirm(`Promote ${moving} students to their next class, graduate ${graduating}${held.size ? ` and keep ${held.size} in their class to repeat` : ''}? Do this once, at the end of the session, after report cards are published.`)) return;
     setBusy(true);
     try {
       // Every move is decided from the list as it is now, so nobody is promoted twice.
-      const moves = active.map((s) => ({ s, to: dest(s.classId) })).filter((m) => m.to !== 'stay');
+      const moves = active.filter((s) => !held.has(s.id)).map((s) => ({ s, to: dest(s.classId) })).filter((m) => m.to !== 'stay');
       for (let i = 0; i < moves.length; i += 400) {
         const b = writeBatch(getDb());
         for (const { s, to } of moves.slice(i, i + 400)) {
@@ -81,7 +97,7 @@ export function SessionTools() {
       const rows = (out.students as StudentProfile[]).map((s) =>
         [s.name, s.admissionNo, classes.find((c) => c.id === s.classId)?.name, s.status ?? 'active', s.dob, s.guardians[0]?.name, s.guardians[0]?.phone, s.guardians[0]?.email].map(q).join(','),
       );
-      download(`${slug}-students.csv`, '﻿Name,Admission no,Class,Status,Date of birth,Guardian,Phone,Email\r\n' + rows.join('\r\n'));
+      download(`${slug}-students.csv`, 'Name,Admission no,Class,Status,Date of birth,Guardian,Phone,Email\r\n' + rows.join('\r\n'));
       toast('Exported everything: a JSON file with every record, and a students CSV.');
     } catch (e) {
       toast(friendlyError(e), 'error');
@@ -130,6 +146,26 @@ export function SessionTools() {
             </tbody>
           </table>
         </div>
+        {review.length > 0 && (
+          <div className="promo-review">
+            <h3 className="h4">
+              {review.length} student{review.length === 1 ? '' : 's'} did not meet the promotion rule
+            </h3>
+            <p className="muted small">
+              The rule: a cumulative average of {policy.passMark}% or more{policy.creditSubjects.length ? `, and at least ${policy.creditMark}% in ${policy.creditSubjects.join(' and ')}` : ''}. Ticked students stay in their class. Untick anyone the school decides to promote anyway.
+            </p>
+            <ul className="queue-list">
+              {review.map(({ s, cum }) => (
+                <li key={s.id}>
+                  <label className="check">
+                    <input type="checkbox" checked={repeats(s.id)} onChange={(e) => setRepeat((r) => ({ ...r, [s.id]: e.target.checked }))} /> {s.name}, {classes.find((c) => c.id === s.classId)?.name}
+                  </label>
+                  <span className="muted small">{cum!.reasons.join('; ')}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
         <div>
           <button className="pill ink" onClick={promote} disabled={busy || !active.length}>
             Promote students

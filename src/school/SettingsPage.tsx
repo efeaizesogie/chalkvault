@@ -126,6 +126,21 @@ export function SettingsPage() {
           {toggle('showPositions', 'Show positions on report cards', 'Class position and position in each subject.')}
           {toggle('cloudCommentFallback', 'Cloud help for comments, with names removed', 'Used only when a teacher’s computer can’t run Gemini Nano.')}
           {toggle('cloudScanning', 'Read score-sheet photos in the cloud', 'A score sheet shows names, so this sends names to Google’s cloud. Leave off to read sheets on-device only.')}
+          <h3 className="h4">Promotion rule for third term</h3>
+          <div className="form-grid">
+            <label className="field">
+              <span className="mono">Pass mark for the cumulative average (%)</span>
+              <input type="number" min={0} max={100} value={rules.passMark} onChange={(e) => rule('passMark', Number(e.target.value) || 0)} />
+            </label>
+            <label className="field">
+              <span className="mono">Credit mark in key subjects (%)</span>
+              <input type="number" min={0} max={100} value={rules.creditMark} onChange={(e) => rule('creditMark', Number(e.target.value) || 0)} />
+            </label>
+          </div>
+          <label className="field">
+            <span className="mono">Subjects that need a credit, separated by commas</span>
+            <input value={rules.creditSubjects.join(', ')} onChange={(e) => rule('creditSubjects', e.target.value.split(',').map((x) => x.trim()).filter(Boolean))} placeholder="English Language, Mathematics" />
+          </label>
         </section>
 
         <section className="panel">
