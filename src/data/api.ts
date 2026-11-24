@@ -151,7 +151,7 @@ export async function updateSchool(schoolId: string, patch: Partial<Omit<School,
 /** Deletes a school and its records. Only the owner can do this (enforced by rules). */
 export async function deleteSchool(schoolId: string, ownerUid: string) {
   const db = getDb();
-  const modules: ModuleName[] = ['feeItems', 'invoices', 'payments', 'messages', 'lessons', 'incidents', 'applications', 'timetable', 'leave', 'books', 'loans', 'routes', 'inventory'];
+  const modules: ModuleName[] = ['feeItems', 'invoices', 'payments', 'messages', 'lessons', 'incidents', 'applications', 'timetable', 'leave', 'books', 'loans', 'routes', 'inventory', 'termSummaries'];
   for (const col of [paths.records, paths.subjectRecords, paths.attendance, paths.offerings, paths.notices, ...modules.map((m) => (s: string) => mod(s, m)), paths.students, paths.classes, paths.terms, paths.invites, paths.ledger]) {
     const snap = await getDocs(col(schoolId));
     for (let i = 0; i < snap.docs.length; i += 400) {

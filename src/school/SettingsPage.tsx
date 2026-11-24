@@ -1,9 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addArm, addSubjectEverywhere, addTerm, deleteClass, deleteOffering, deleteSchool, saveClass, updateSchool } from '../data/api';
-import { CLASS_COLOURS, COLOUR_KEYS, type ClassRoom, type SchoolPolicy, type Term } from '../data/types';
-import { updateDoc } from 'firebase/firestore';
-import { paths } from '../data/api';
+import { addArm, addSubjectEverywhere, deleteClass, deleteOffering, deleteSchool, saveClass, updateSchool } from '../data/api';
+import { CLASS_COLOURS, COLOUR_KEYS, type ClassRoom, type SchoolPolicy } from '../data/types';
 import { COUNTRIES } from './presets';
 import { assessmentsOf, bandsOf, parseAssessments, parseBands } from '../lib/results';
 import { AddClassDialog } from '../components/AddClassDialog';
@@ -11,9 +9,10 @@ import { useAuth } from '../auth/AuthProvider';
 import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
 import { SessionTools } from './SessionTools';
+import { TermPanel } from './TermPanel';
 
 export function SettingsPage() {
-  const { school, schoolId, terms, term, classes, offerings, members, me, policy } = useSchool();
+  const { school, schoolId, classes, offerings, members, me, policy } = useSchool();
   const { signOut, user } = useAuth();
   const toast = useToast();
   const nav = useNavigate();
@@ -24,8 +23,6 @@ export function SettingsPage() {
   const [principal, setPrincipal] = useState(school.principalName ?? '');
   const [levels, setLevels] = useState(school.levels.join('\n'));
   const [newSubject, setNewSubject] = useState('');
-  const [newTerm, setNewTerm] = useState('');
-  const [newSession, setNewSession] = useState(term?.session ?? '');
   const [assess, setAssess] = useState(assessmentsOf(school).map((a) => `${a.label}, ${a.max}`).join('\n'));
   const [bands, setBands] = useState(bandsOf(school).map((b) => `${b.grade}, ${b.min}, ${b.remark}`).join('\n'));
   const [limit, setLimit] = useState(String(school.commentLimit ?? 600));
@@ -57,17 +54,6 @@ export function SettingsPage() {
       fail(e);
     }
   };
-
-  const startTerm = async () => {
-    if (!newTerm.trim()) return;
-    const id = await addTerm(schoolId, newTerm.trim(), terms.length + 1);
-    if (newSession.trim()) await updateDoc(paths.term(schoolId, id), { session: newSession.trim() });
-    await updateSchool(schoolId, { currentTermId: id });
-    setNewTerm('');
-    toast(`${newTerm.trim()} is now the current term. Earlier terms stay on every student’s record.`);
-  };
-
-  const setTermField = (t: Term, patch: Partial<Term>) => updateDoc(paths.term(schoolId, t.id), patch).catch(fail);
 
   const addSubject = async () => {
     const s = newSubject.trim();
@@ -236,37 +222,7 @@ export function SettingsPage() {
           </div>
         </section>
 
-        <section className="panel">
-          <h2 className="h3">Terms and sessions</h2>
-          <ol className="term-list">
-            {terms.map((t) => (
-              <li key={t.id} className="term-row">
-                <span>
-                  {t.name}
-                  {t.session ? `, ${t.session}` : ''}
-                </span>
-                <label className="field inline small">
-                  <span className="mono">Next term begins</span>
-                  <input type="date" defaultValue={t.nextTermBegins ?? ''} onBlur={(e) => setTermField(t, { nextTermBegins: e.target.value })} />
-                </label>
-                {t.id === term?.id ? (
-                  <span className="mono final-tag">Current</span>
-                ) : (
-                  <button className="link" onClick={() => updateSchool(schoolId, { currentTermId: t.id })}>
-                    Make current
-                  </button>
-                )}
-              </li>
-            ))}
-          </ol>
-          <div className="inline-add">
-            <input value={newTerm} onChange={(e) => setNewTerm(e.target.value)} placeholder="e.g. Second term" />
-            <input value={newSession} onChange={(e) => setNewSession(e.target.value)} placeholder="Session, e.g. 2026/2027" />
-            <button className="pill ink" onClick={startTerm} disabled={!newTerm.trim()}>
-              Start term
-            </button>
-          </div>
-        </section>
+        <TermPanel />
 
         <section className="panel">
           <h2 className="h3">Score sheet and grades</h2>

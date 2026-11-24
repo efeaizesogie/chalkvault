@@ -2,10 +2,11 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getDoc, getDocs, writeBatch } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
-import { addNotice, blankStudent, createSchool, getUserSchools, newPin, paths } from '../data/api';
+import { addNotice, blankStudent, createSchool, getUserSchools, newPin, paths, updateSchool } from '../data/api';
+import { seedDemoHistory } from './demoHistory';
 import { getDb } from '../lib/firebase';
 import { DEMO_ARMS, DEMO_LEVELS, DEMO_STUDENTS, DEMO_SUBJECTS } from '../sample';
-import type { ClassRoom, Offering, School, SubjectRecord, TermRecord } from '../data/types';
+import type { ClassRoom, Offering, School, StudentProfile, SubjectRecord, Term, TermRecord } from '../data/types';
 import { AuthShell } from './AuthShell';
 
 /** Signs in anonymously and seeds a private demo school, so anyone can try Chalkvault without an account. */
@@ -25,7 +26,7 @@ export function Demo() {
         const mine = await getUserSchools(u.uid);
         for (const id of Object.keys(mine.schools)) {
           const s = (await getDoc(paths.school(id)).catch(() => null))?.data() as School | undefined;
-          if (s?.arms) return nav(`/s/${id}`, { replace: true });
+          if (s?.arms && (s.demoVersion ?? 0) >= 3) return nav(`/s/${id}`, { replace: true });
         }
 
         setStatus('Setting up Greenfield Academy (demo)…');
@@ -49,19 +50,22 @@ export function Demo() {
 
         setStatus('Adding students, notes and scores…');
         const b = writeBatch(getDb());
+        const seededStudents: StudentProfile[] = [];
+        const seededScores: SubjectRecord[] = [];
         for (const [armName, list] of Object.entries(DEMO_STUDENTS)) {
           const cls = classes.find((c) => c.name === armName);
           if (!cls) continue;
           list.forEach((src, i) => {
             const s = { ...blankStudent(cls.id, src.name, i + 1), pronoun: src.pronoun, admissionNo: src.admissionNo, guardians: src.guardians, resultPin: newPin() };
             b.set(paths.student(schoolId, s.id), s);
+            seededStudents.push(s);
             b.set(paths.record(schoolId, termId, s.id), { termId, studentId: s.id, classId: cls.id, notes: src.notes, updatedAt: Date.now(), updatedBy: u.uid } satisfies TermRecord);
             for (const [subject, [ca1, ca2, exam]] of Object.entries(src.scores)) {
               const o = offerings.find((x) => x.classId === cls.id && x.subject === subject);
               if (!o) continue;
               const scores: Record<string, number> = { ca1, exam };
               if (ca2 > 0) scores.ca2 = ca2; // a missed test shows as a gap, as in a real score sheet
-              b.set(paths.subjectRecord(schoolId, termId, o.id, s.id), {
+              const rec: SubjectRecord = {
                 termId,
                 offeringId: o.id,
                 classId: cls.id,
@@ -70,11 +74,17 @@ export function Demo() {
                 scores,
                 updatedAt: Date.now(),
                 updatedBy: u.uid,
-              } satisfies SubjectRecord);
+              };
+              seededScores.push(rec);
+              b.set(paths.subjectRecord(schoolId, termId, o.id, s.id), rec);
             }
           });
         }
         await b.commit();
+        setStatus('Adding registers and last term’s figures…');
+        const term = (await getDoc(paths.term(schoolId, termId))).data() as Term;
+        await seedDemoHistory({ schoolId, school, term, uid: u.uid, classes, offerings, students: seededStudents, subjectRecords: seededScores });
+        await updateSchool(schoolId, { demoVersion: 3 });
         await addNotice(schoolId, {
           title: 'Report cards due Friday',
           body: 'Please finish score sheets and form teacher comments by Friday. Results will be published to parents on Monday.',

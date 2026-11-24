@@ -1,0 +1,42 @@
+/* Hallmark · built: the project · redesign: polish · theme: locked by DESIGN.md · genre: editorial */
+/* critique: charts follow the dataviz method: two validated series colours, thin marks, hairline grid, legend and table view, values in ink */
+.chart-card { position: relative; align-content: start; }
+.chart-tools { display: flex; gap: 14px; align-items: center; }
+.chart-note { margin: -6px 0 0; }
+.legend { list-style: none; margin: 0; padding: 0; display: flex; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--ink-2); }
+.legend li { display: inline-flex; align-items: center; gap: 6px; }
+.swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; }
+.swatch.now { background: var(--series-now); }
+.swatch.before { background: var(--series-before); }
+
+.bar-rows { position: relative; display: grid; gap: 8px; }
+.bar-row { display: grid; grid-template-columns: minmax(84px, 30%) 1fr 64px; gap: 10px; align-items: center; font-size: 14px; padding: 2px 0; }
+.bar-row:hover { background: var(--paper); }
+.bar-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.bar-track { display: grid; gap: 2px; }
+.bar-fill { display: block; height: 10px; border-radius: 0 4px 4px 0; min-width: 2px; }
+.bar-fill.now { background: var(--series-now); }
+.bar-fill.before { background: var(--series-before); height: 6px; }
+.bar-value { text-align: right; font-variant-numeric: tabular-nums; color: var(--ink); }
+
+.line-chart { position: relative; width: 100%; }
+.line-chart svg { display: block; overflow: visible; }
+.line-chart .grid { stroke: var(--rule); stroke-width: 1; }
+.line-chart .baseline { stroke: var(--ink-2); stroke-width: 1; }
+.line-chart .crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+.line-chart .axis { fill: var(--muted); font: 400 11px/1 var(--sans); }
+.line-chart .axis.value { fill: var(--ink); font-size: 12px; }
+.series path { fill: none; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.series circle { stroke: var(--sheet); stroke-width: 2; }
+.series.now path { stroke: var(--series-now); }
+.series.now circle, .col.now { fill: var(--series-now); }
+.series.before path { stroke: var(--series-before); }
+.series.before circle, .col.before { fill: var(--series-before); }
+
+.chart-tip { position: absolute; z-index: 5; pointer-events: none; display: grid; gap: 2px; min-width: 150px; padding: 8px 10px; background: var(--sheet); border: 1px solid var(--ink); border-radius: 10px; box-shadow: var(--lift); font-size: 13px; }
+.chart-tip span { display: inline-flex; align-items: center; gap: 6px; color: var(--ink-2); }
+.chart-table { width: 100%; border-collapse: collapse; font-size: 14px; }
+.chart-table th, .chart-table td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--rule); font-variant-numeric: tabular-nums; }
+.chart-table th { font-weight: 600; }
+.delta.good { color: var(--good); }
+.delta.bad { color: var(--danger); }

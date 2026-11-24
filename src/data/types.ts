@@ -56,6 +56,8 @@ export interface School {
   subjects: string[];
   colour: ClassColour;
   demo?: boolean;
+  /** Demo seed format; older demo schools are replaced. */
+  demoVersion?: number;
   createdAt: number;
   address?: string;
   motto?: string;

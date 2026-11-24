@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { query, where } from 'firebase/firestore';
+import { arrayUnion, query, updateDoc, where } from 'firebase/firestore';
 import { newPin, paths, publishResult, readResult, saveStudent } from '../data/api';
 import { useQuery } from '../data/hooks';
 import { CLASS_COLOURS, type ClassRoom, type ReportCard, type StudentProfile } from '../data/types';
@@ -9,7 +9,7 @@ import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
 
 /** Publish an arm's report cards to the result portal. Each student keeps the same private PIN every term. */
-export function PublishButton({ students, cards, blocked }: { classId: string; students: StudentProfile[]; cards: Map<string, ReportCard>; blocked: boolean }) {
+export function PublishButton({ classId, students, cards, blocked }: { classId: string; students: StudentProfile[]; cards: Map<string, ReportCard>; blocked: boolean }) {
   const { schoolId, school, term } = useSchool();
   const toast = useToast();
   const [busy, setBusy] = useState(false);
@@ -40,6 +40,7 @@ export function PublishButton({ students, cards, blocked }: { classId: string; s
         });
         n++;
       }
+      if (n) await updateDoc(paths.term(schoolId, term.id), { publishedArms: arrayUnion(classId) });
       toast(n ? `Published ${n} report card${n === 1 ? '' : 's'}. Parents can now open them with their result PIN.` : 'No report cards with scores to publish yet.');
     } catch (e) {
       toast(friendlyError(e), 'error');
