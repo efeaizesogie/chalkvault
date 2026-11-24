@@ -34,7 +34,7 @@ export async function seedDemoHistory(opts: { schoolId: string; school: School; 
   const rand = rng(20261124);
   const days = schoolDays(6);
   // A few children are absent more often, so the at-risk list has someone in it.
-  const weak = new Set(students.filter((_, i) => i % 7 === 3).map((s) => s.id));
+  const weak = new Set(students.filter((_, i) => i % 14 === 5).map((s) => s.id));
   const attendance: AttendanceDay[] = [];
   const b = writeBatch(getDb());
   for (const c of classes) {
@@ -92,8 +92,9 @@ export async function seedDemoHistory(opts: { schoolId: string; school: School; 
     scoresEntered: now.scoresExpected,
     commentsWritten: now.students,
     commentsApproved: now.students,
-    feesExpected: 4_850_000,
-    feesCollected: 4_212_500,
+    // Last term closed with most fees in: about the same roll, 88% collected.
+    feesExpected: Math.round((now.students * 98000) / 500) * 500,
+    feesCollected: Math.round((now.students * 98000 * 0.88) / 500) * 500,
     computedAt: Date.now(),
   };
   // Only weeks are needed for the chart; give the earlier term its own dates.

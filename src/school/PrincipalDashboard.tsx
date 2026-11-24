@@ -203,7 +203,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
 
       {!school.demo && <SetupChecklist students={active.length} hasInvoices={now.invoices.length > 0} />}
 
-      <div className="record-grid">
+      <div className="dash-lead">
         <ChartCard
           title="Attendance week by week"
           note={two ? 'Each week of this term against the same week of last term.' : 'Share of students marked present or late each week.'}
@@ -211,7 +211,7 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
           action={<ExplainBtn q="Explain the week by week attendance: which weeks dipped, which arms caused it, and what to check." />}
           table={{ head: ['Week', ...series.map((x) => x.name)], rows: weekPoints.map((p) => [p.label, ...p.values.map((v) => (v === null ? '' : `${v}%`))]) }}
         >
-          <LineChart points={weekPoints} series={series} floor={50} />
+          <LineChart points={weekPoints} series={series} floor={50} height={Math.min(380, Math.max(220, peopled.length * 28))} />
         </ChartCard>
 
         <ChartCard
@@ -221,6 +221,9 @@ export function PrincipalDashboard({ greeting }: { greeting: (line: string) => J
         >
           <BarRows max={100} series={series} rows={peopled.map((c) => ({ label: c.name, to: `/s/${schoolId}/classes/${c.id}?tab=register`, values: pair(s?.attendanceByArm[c.id], before?.attendanceByArm[c.id]) }))} />
         </ChartCard>
+      </div>
+
+      <div className="dash-flow">
 
         <ChartCard
           title="Subject averages"

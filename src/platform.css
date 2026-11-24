@@ -405,7 +405,7 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
 .prose p { margin: 0 0 8px; }
 .prose ul { margin: 0 0 8px; padding-left: 20px; display: grid; gap: 6px; }
 .prose > :last-child { margin-bottom: 0; }
-.dashboard .record-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 360px), 1fr)); }
+
 
 /* ---------- Responsive hardening ---------- */
 .panel-head { flex-wrap: wrap; gap: 8px 16px; }
@@ -479,3 +479,10 @@ select:not([multiple]):not([size]) {
   .ws .device-chip { padding: 3px 7px; font-size: 10.5px; }
   .ws .masthead-actions .pill { padding: 4px 8px; font-size: 12px; gap: 4px; }
 }
+
+/* Overview: attendance leads side by side; every other card flows into balanced columns, so cards of
+   different heights never leave holes. Two columns on a laptop, three on a wide screen, one on a phone. */
+.dash-lead { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr); gap: 16px; align-items: stretch; }
+.dash-flow { columns: 3 340px; column-gap: 16px; }
+.dash-flow > * { break-inside: avoid; margin: 0 0 16px; }
+@media (max-width: 1100px) { .dash-lead { grid-template-columns: minmax(0, 1fr); } }

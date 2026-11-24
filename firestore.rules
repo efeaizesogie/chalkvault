@@ -72,7 +72,10 @@ service cloud.firestore {
                 && request.resource.data.classIds == get(invitePath(request.resource.data.inviteCode)).data.classIds
                 && request.resource.data.get('offeringIds', []) == get(invitePath(request.resource.data.inviteCode)).data.get('offeringIds', [])
                 && request.resource.data.get('subjectClassIds', []) == get(invitePath(request.resource.data.inviteCode)).data.get('subjectClassIds', []))
-          );
+          )
+          // A demo school's owner may add placeholder staff (ids starting demo-staff-, never an owner) so the demo shows a full staff room.
+          || (isOwner() && schoolDoc().get('demo', false) == true && uid.matches('demo-staff-[0-9]+')
+              && request.resource.data.uid == uid && request.resource.data.role != 'owner');
         // Admins manage staff; nobody can promote someone to owner, and only the owner changes the owner's record.
         allow update: if isAdmin()
           && request.resource.data.uid == resource.data.uid

@@ -125,10 +125,10 @@ function useWidth<T extends HTMLElement>() {
 }
 
 /** A line over time (0 to 100%) with markers, a crosshair and a tooltip. Two series share one axis. */
-export function LineChart({ points, series, unit = '%', floor = 0 }: { points: { label: string; values: (number | null)[] }[]; series: Series[]; unit?: string; floor?: number }) {
+export function LineChart({ points, series, unit = '%', floor = 0, height = 200 }: { points: { label: string; values: (number | null)[] }[]; series: Series[]; unit?: string; floor?: number; height?: number }) {
   const [ref, w] = useWidth<HTMLDivElement>();
   const [hover, setHover] = useState<number | null>(null);
-  const h = 200;
+  const h = height;
   const pad = { l: 36, r: 12, t: 12, b: 28 };
   const iw = w - pad.l - pad.r;
   const ih = h - pad.t - pad.b;
