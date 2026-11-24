@@ -1,26 +1,53 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../auth/AuthProvider';
 
-const FEATURES: { title: string; body: string; soon?: boolean }[] = [
-  { title: 'Classes, arms and subjects', body: 'JSS 1A, JSS 1B, SS 2 Gold: set up every class and arm with its subjects in one step. Electives can have their own students.' },
-  { title: 'Your school, your rules', body: 'Decide who takes attendance, how many form classes a teacher can hold, whether comments need approval, and what goes on the score sheet.' },
-  { title: 'Form teachers and subject teachers', body: 'A subject teacher sees only their subjects and those students. A form teacher sees their arm. Admins see everything.' },
-  { title: 'Attendance in one tap', body: 'Daily or lesson by lesson, as your school chooses. Or photograph the paper register and Gemini Nano reads it on the laptop.' },
-  { title: 'Score sheets that fill themselves', body: 'Type scores, scan a photographed score sheet, or import results from your CBT system. The AI matches the columns for you.' },
-  { title: 'Report cards and broadsheets', body: 'Every subject, total, grade, position and remark, with form teacher and principal comments, ready to print for the whole class.' },
-  { title: 'Results for parents by PIN', body: 'Publish report cards and print a private result PIN for each student. Parents check results online without an account.' },
-  { title: 'Report comments, written on the laptop', body: 'Gemini Nano turns rough notes, scores and attendance into a warm, specific comment, writing it as you watch.' },
-  { title: 'A whole class in one click', body: 'Write every comment in a class at once. On-device writing costs nothing per comment and works with the Wi-Fi off.' },
-  { title: 'Head teacher approval', body: 'Form teachers send comments for approval. Once approved, a comment is locked. The principal’s comments can be drafted too.' },
-  { title: 'Parents in their own language', body: 'French and Spanish are translated on the laptop. Yoruba, Hausa, Igbo and more go to the cloud with names removed. Share on WhatsApp.' },
-  { title: 'Students who need follow-up', body: 'As each comment is written, the AI flags academic, attendance or wellbeing concerns for the head teacher.' },
-  { title: 'An audit ledger', body: 'Every AI request is logged: where it ran, and exactly what, if anything, left the device.' },
-  { title: 'Ask Chalkvault', body: 'Ask “Who is failing two subjects?” or “Which arm has the lowest attendance?” and get an answer from your own records, written on the laptop.' },
-  { title: 'Fees the way you charge them', body: 'Class fees, optional levies, sibling, staff and scholarship discounts, part payments and arrears. Photograph a bank teller and Gemini Nano fills in the payment.' },
-  { title: 'Messages in every family’s language', body: 'Absence alerts, fee reminders and results notices in English, Yoruba, Hausa, Igbo and more, sent by WhatsApp or SMS.' },
-  { title: 'Lesson notes and quizzes', body: 'Lesson notes in the scheme-of-work format and quizzes you can print or load into your CBT system.' },
-  { title: 'Admissions, timetable and the rest', body: 'Online applications, a clash-free timetable, behaviour log, library, transport, inventory, staff leave, alumni and promotion to the next session.' },
-  { title: 'Google Drive import', body: 'Pull CBT results straight from Google Drive.', soon: true },
+type Feature = { title: string; body: string; soon?: boolean };
+const GROUPS: { title: string; items: Feature[] }[] = [
+  {
+    title: 'Setting up and running the school',
+    items: [
+      { title: 'Bring in your old records', body: 'Photos, PDFs, Excel or CSV. Gemini Nano sorts each page (class list, score sheet, ledger, staff list) and reads it on the laptop. You check every row before it is saved.' },
+      { title: 'Guided setup with suggestions', body: 'Pick levels from Creche to SS 3, arms from A to Gold or Diamond, and every Nigerian subject from ready lists instead of typing them.' },
+      { title: 'Classes, arms and subjects', body: 'JSS 1A, JSS 1B, SS 2 Gold: each arm with its subjects. Electives can have their own students.' },
+      { title: 'Your school, your rules', body: 'Who takes attendance, how many form classes a teacher holds, whether comments need approval, the score sheet, the grade bands and the promotion rule.' },
+      { title: 'Form and subject teachers', body: 'A subject teacher sees only their subjects and those students, a form teacher their arm, admins everything. Enforced by the database rules.' },
+      { title: 'Terms and sessions', body: 'Dates and status for each term, a checklist to close it, records locked once closed, and any earlier term one click away.' },
+      { title: 'Timetable', body: 'A clash-free week for every arm and teacher, with lessons and free periods spread through the day. Print one arm or all of them.' },
+      { title: 'Admissions and the rest', body: 'Online applications with accept-and-enrol, behaviour and health log, library, transport, inventory, staff leave and alumni.' },
+    ],
+  },
+  {
+    title: 'For the principal',
+    items: [
+      { title: 'A dashboard of the term', body: 'Attendance week by week and by arm, subject and arm averages, grade spread, fees by arm, staff progress and students who need attention, each against last term.' },
+      { title: 'This morning’s brief', body: 'A short read of where the school stands, written from the dashboard’s own figures by Gemini Nano on the laptop. “Explain this” on any chart.' },
+      { title: 'Ask Chalkvault', body: 'Ask “Who is failing two subjects?” or “Which arm has the lowest attendance?” and get an answer from your own records.' },
+      { title: 'Term against term, year against year', body: 'Closing a term saves its figures, so every later dashboard can compare. Third term report cards carry the cumulative result.' },
+    ],
+  },
+  {
+    title: 'Teaching and results',
+    items: [
+      { title: 'Registers in one tap', body: 'Daily or lesson by lesson, as your school chooses. Or photograph the paper register and Gemini Nano reads it on the laptop.' },
+      { title: 'Score sheets that fill themselves', body: 'Type scores, scan a photographed score sheet, or import results from your CBT system. The AI matches the columns for you.' },
+      { title: 'Report comments, written on the laptop', body: 'Gemini Nano turns rough notes, scores and attendance into a warm, specific comment, streaming as you watch. A whole class in one click.' },
+      { title: 'Approval and follow-up', body: 'Comments go to the head for approval and lock once approved. The AI flags academic, attendance or wellbeing concerns as it writes.' },
+      { title: 'Report cards and broadsheets', body: 'Every subject, total, grade, position and remark, with form teacher and principal comments, and the cumulative result in third term.' },
+      { title: 'Promotion by your rule', body: 'Set a pass mark and the subjects that need a credit. Students who miss it are flagged to repeat, and you decide.' },
+      { title: 'Lesson notes and quizzes', body: 'Lesson notes in the scheme-of-work format and quizzes you can print or load into your CBT system.' },
+    ],
+  },
+  {
+    title: 'Money, parents and paperwork',
+    items: [
+      { title: 'Fees the way you charge them', body: 'Class fees, optional levies, sibling, staff and scholarship discounts, part payments and arrears. Photograph a bank teller and the payment fills itself in.' },
+      { title: 'Results for parents by PIN', body: 'Publish report cards and print a private result PIN for each student. Parents see the card, attendance and fee balance online without an account.' },
+      { title: 'Messages in every family’s language', body: 'Absence alerts, fee reminders and results notices in English, Yoruba, Hausa, Igbo and more, sent by WhatsApp or SMS.' },
+      { title: 'Print and export anything', body: 'Overview, report cards, broadsheets, timetables, fees statements, receipts and class lists print under your letterhead, and every list exports to Excel.' },
+      { title: 'An audit ledger', body: 'Every AI request is logged: where it ran, and exactly what, if anything, left the device.' },
+      { title: 'Google Drive import', body: 'Pull CBT results straight from Google Drive.', soon: true },
+    ],
+  },
 ];
 
 const FAQ: { q: string; a: string }[] = [
@@ -49,8 +76,20 @@ const FAQ: { q: string; a: string }[] = [
     a: 'When the school publishes a term’s report cards, each student has a private result PIN, printed on a slip. A parent enters it on the Chalkvault results page to view and print the report card. No account or app is needed.',
   },
   {
+    q: 'We keep records on paper and in Excel. Can we bring them in?',
+    a: 'Yes. Photograph class lists, score sheets, fee ledgers and staff lists, handwritten or typed, or drop in PDFs, Excel and CSV files. Gemini Nano sorts each page and reads it on the laptop; you check everything, including possible duplicates and hard-to-read fields, before anything is saved.',
+  },
+  {
     q: 'Can we import scores from our CBT system?',
     a: 'Yes. Upload the CSV or Excel export. Chalkvault reads only the header row with AI to match columns to your score sheet, then matches students by admission number or name for you to check before saving.',
+  },
+  {
+    q: 'Can we print with our own letterhead?',
+    a: 'Yes. Upload your crest in Settings. Report cards, broadsheets, timetables, fees statements, receipts, class lists and the termly overview all print under your school’s name, motto and contact details, and every list exports to Excel.',
+  },
+  {
+    q: 'How do terms and sessions work?',
+    a: 'Each term has its dates and a status. Closing a term checks for missing scores, unapproved comments and unpublished results, saves the term’s figures and locks its records. Anyone can look back at an earlier term, and third term report cards show the cumulative result with your promotion rule.',
   },
   { q: 'What does it cost?', a: 'Chalkvault is free during the pilot, and the code is open source under the Apache 2.0 licence.' },
 ];
@@ -88,8 +127,8 @@ export function Landing() {
 
       <section className="lp-hero">
         <div className="lp-hero-copy">
-          <h1 className="lp-display">School records with a private AI.</h1>
-          <p className="lede">Classes, students and report comments, drafted on the teacher’s own laptop.</p>
+          <h1 className="lp-display">Run the whole school, with a private AI.</h1>
+          <p className="lede">Admissions, registers, scores, report cards, fees, timetables and the principal’s dashboard in one place. The AI that helps runs on the teacher’s own laptop, so children’s names stay in school.</p>
           <div className="lp-hero-actions">
             <Link to="/start" className="ticket">
               Register your school
@@ -104,28 +143,28 @@ export function Landing() {
 
       <section className="lp-problem">
         <p>
-          At report time a teacher writes a comment for every child. To keep up, many paste their notes, names and all, into a chatbot. Many schools and
-          districts now forbid it. Chalkvault gives teachers the same help without the child’s name ever reaching the AI.
+          Most schools still run on exercise books, Excel sheets and WhatsApp groups. At report time teachers paste notes, names and all, into chatbots to keep
+          up. Chalkvault brings the records together and gives staff the same AI help without a child’s name ever reaching the cloud.
         </p>
       </section>
 
       <section className="lp-section" id="how">
-        <h2 className="lp-h2">From a blank school to finished reports</h2>
+        <h2 className="lp-h2">From day one to the end of the session</h2>
         <ol className="lp-steps">
           <li>
             <span className="step-no">1</span>
-            <h3>Set up your school</h3>
-            <p>Name it, pick your country, and Chalkvault suggests class levels, term names and subjects. Change anything.</p>
+            <h3>Set up, or bring in what you have</h3>
+            <p>Pick classes, arms and subjects from ready lists, or photograph your class lists, score sheets and fee ledgers. Gemini Nano sorts and reads them on the laptop for you to check.</p>
           </li>
           <li>
             <span className="step-no">2</span>
-            <h3>Invite staff, add students</h3>
-            <p>Send teachers a private invite link and assign their classes. Paste a class list to create student records.</p>
+            <h3>Run the term</h3>
+            <p>Teachers take registers and enter scores; bursars raise invoices and record payments; parents get messages in their own language. The principal sees it all on one dashboard.</p>
           </li>
           <li>
             <span className="step-no">3</span>
-            <h3>Write and export reports</h3>
-            <p>Teachers jot notes, Gemini Nano drafts each comment on their laptop, and you print or export the term’s reports.</p>
+            <h3>Close the term, look back</h3>
+            <p>Comments, report cards and broadsheets, published to parents by PIN. Closing a term saves its figures, so you can compare term against term and year against year.</p>
           </li>
         </ol>
       </section>
@@ -150,15 +189,20 @@ export function Landing() {
 
       <section className="lp-section" id="features">
         <h2 className="lp-h2">What’s inside</h2>
-        <div className="lp-features">
-          {FEATURES.map((f) => (
-            <article key={f.title} className={`lp-feature ${f.soon ? 'soon' : ''}`}>
-              <h3>{f.title}</h3>
-              {f.soon && <span className="soon-tag">Coming soon</span>}
-              <p>{f.body}</p>
-            </article>
-          ))}
-        </div>
+        {GROUPS.map((g) => (
+          <div key={g.title} className="lp-group">
+            <h3 className="lp-group-title">{g.title}</h3>
+            <div className="lp-features">
+              {g.items.map((f) => (
+                <article key={f.title} className={`lp-feature ${f.soon ? 'soon' : ''}`}>
+                  <h3>{f.title}</h3>
+                  {f.soon && <span className="soon-tag">Coming soon</span>}
+                  <p>{f.body}</p>
+                </article>
+              ))}
+            </div>
+          </div>
+        ))}
       </section>
 
       <section className="lp-section lp-offline">
@@ -172,11 +216,11 @@ export function Landing() {
         <div className="lp-who">
           <div>
             <h3>For school owners and heads</h3>
-            <p>One place for classes, staff and student records, with control over who sees what and an audit ledger of AI use.</p>
+            <p>A dashboard of attendance, results, fees and staff progress against last term, a morning brief written from your own figures, and control over who sees what.</p>
           </div>
           <div>
-            <h3>For teachers</h3>
-            <p>Your classes, your notes, and first drafts of every comment in your tone and reading level. You always edit and approve.</p>
+            <h3>For teachers and bursars</h3>
+            <p>Your classes, registers and score sheets, first drafts of every comment, lesson notes and quizzes. Bursars get invoices, receipts read from photos and a fees statement to print.</p>
           </div>
         </div>
       </section>

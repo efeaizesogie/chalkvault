@@ -540,3 +540,8 @@ select:not([multiple]):not([size]) {
   select optgroup { font: 600 12px/1.4 var(--sans); color: var(--muted); padding: 6px 8px 2px; }
   select optgroup option { color: var(--ink); }
 }
+
+/* Landing: features grouped by who uses them */
+.lp-group { display: grid; gap: 12px; margin-top: 32px; }
+.lp-group:first-of-type { margin-top: 8px; }
+.lp-group-title { font: 400 24px/1.2 var(--serif); margin: 0; }
