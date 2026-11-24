@@ -1,15 +1,31 @@
 rules_version = '2';
 
-// Chalkvault: every school is a private tenant.
-// - Only members can read a school.
+// Chalkvault v2: every school is a private tenant, run by its own rules.
 // - Owners and admins manage everything in their school.
-// - Teachers can only read and write students and records in the classes assigned to them.
+// - A form teacher sees the students, register and form records of their arm(s).
+// - A subject teacher sees the students in arms where they teach, and only their own subjects' scores.
+// - The school's policy (schools/{id}.policy) decides who takes attendance and who may manage students.
+// - Published report cards live at results/{pin}; only someone holding the private PIN can read one.
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Each user's list of schools (just names and roles, for the school picker).
+    // Each user's list of schools (names and roles, for the school picker).
     match /users/{uid} {
       allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+
+    // Published results: readable by exact PIN only (no listing). Written by that school's owner or admins.
+    match /results/{pin} {
+      function adminOf(schoolId) {
+        return request.auth != null
+          && exists(/databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid))
+          && get(/databases/$(database)/documents/schools/$(schoolId)/members/$(request.auth.uid)).data.role in ['owner', 'admin'];
+      }
+      allow get: if true;
+      allow list: if false;
+      allow create: if adminOf(request.resource.data.schoolId) && request.resource.data.pin == pin;
+      allow update: if adminOf(resource.data.schoolId) && request.resource.data.schoolId == resource.data.schoolId;
+      allow delete: if adminOf(resource.data.schoolId);
     }
 
     match /schools/{schoolId} {
@@ -19,9 +35,15 @@ service cloud.firestore {
       function me() { return get(memberPath()).data; }
       function isAdmin() { return isMember() && me().role in ['owner', 'admin']; }
       function isOwner() { return isMember() && me().role == 'owner'; }
-      function teaches(classId) { return isMember() && classId in me().classIds; }
-      function canClass(classId) { return isAdmin() || teaches(classId); }
       function schoolDoc() { return get(/databases/$(database)/documents/schools/$(schoolId)).data; }
+      function policy() { return schoolDoc().get('policy', {}); }
+
+      function formOf(classId) { return isMember() && classId in me().get('classIds', []); }
+      function subjectIn(classId) { return isMember() && classId in me().get('subjectClassIds', []); }
+      function teachesOffering(offeringId) { return isMember() && offeringId in me().get('offeringIds', []); }
+      function seesClass(classId) { return isAdmin() || formOf(classId) || subjectIn(classId); }
+      function managesStudents(classId) { return isAdmin() || (formOf(classId) && policy().get('teachersManageStudents', true) == true); }
+      function invitePath(code) { return /databases/$(database)/documents/schools/$(schoolId)/invites/$(code); }
 
       allow read: if isMember();
       allow create: if signedIn()
@@ -34,17 +56,19 @@ service cloud.firestore {
 
       match /members/{uid} {
         allow read: if isMember();
-        // Owner bootstraps their own membership right after creating the school.
-        allow create: if signedIn() && request.auth.uid == uid && (
+        allow create: if signedIn() && request.auth.uid == uid && request.resource.data.uid == uid && (
+            // The owner bootstraps their own membership right after creating the school.
             (schoolDoc().ownerId == uid && request.resource.data.role == 'owner')
-            // A teacher or admin joins with a valid invite; role and classes must match the invite.
+            // Everyone else joins with an invite; role and assignments must match it exactly.
             || (request.resource.data.inviteCode is string
-                && exists(/databases/$(database)/documents/schools/$(schoolId)/invites/$(request.resource.data.inviteCode))
-                && request.resource.data.role == get(/databases/$(database)/documents/schools/$(schoolId)/invites/$(request.resource.data.inviteCode)).data.role
-                && request.resource.data.classIds == get(/databases/$(database)/documents/schools/$(schoolId)/invites/$(request.resource.data.inviteCode)).data.classIds
-                && request.resource.data.role != 'owner')
-          ) && request.resource.data.uid == uid;
-        // Admins manage staff, but nobody can promote someone to owner, and the owner can't be changed by others.
+                && exists(invitePath(request.resource.data.inviteCode))
+                && request.resource.data.role != 'owner'
+                && request.resource.data.role == get(invitePath(request.resource.data.inviteCode)).data.role
+                && request.resource.data.classIds == get(invitePath(request.resource.data.inviteCode)).data.classIds
+                && request.resource.data.get('offeringIds', []) == get(invitePath(request.resource.data.inviteCode)).data.get('offeringIds', [])
+                && request.resource.data.get('subjectClassIds', []) == get(invitePath(request.resource.data.inviteCode)).data.get('subjectClassIds', []))
+          );
+        // Admins manage staff; nobody can promote someone to owner, and only the owner changes the owner's record.
         allow update: if isAdmin()
           && request.resource.data.uid == resource.data.uid
           && (request.resource.data.role != 'owner' || resource.data.role == 'owner')
@@ -64,39 +88,62 @@ service cloud.firestore {
         allow write: if isAdmin();
       }
 
+      // Arms (JSS 1A, Primary 5B...).
       match /classes/{classId} {
         allow read: if isMember();
         allow write: if isAdmin();
       }
 
+      // A subject in an arm. A teacher may only add or remove themselves from teacherIds, and only for offerings assigned to them.
+      match /offerings/{offeringId} {
+        allow read: if isMember();
+        allow create, delete: if isAdmin();
+        allow update: if isAdmin()
+          || (teachesOffering(offeringId) && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['teacherIds']));
+      }
+
       match /students/{studentId} {
-        allow read: if isAdmin() || (resource != null && teaches(resource.data.classId));
-        allow create: if canClass(request.resource.data.classId);
-        // Teachers can edit their students but cannot move them to a class they don't teach.
-        allow update: if canClass(resource.data.classId) && canClass(request.resource.data.classId);
-        allow delete: if canClass(resource.data.classId);
+        allow read: if resource == null || seesClass(resource.data.classId);
+        allow create: if managesStudents(request.resource.data.classId);
+        allow update: if managesStudents(resource.data.classId) && managesStudents(request.resource.data.classId);
+        allow delete: if managesStudents(resource.data.classId);
       }
 
-      // Notes, scores and report comments, one document per student per term.
-      // Only owners and admins can approve; an approved record is locked for teachers.
+      // The form teacher's record per student per term: notes, the AI-drafted comment, the principal's comment.
+      // Only owners and admins approve; an approved record is locked for teachers.
       match /records/{recordId} {
-        allow read: if isAdmin() || (resource != null && teaches(resource.data.classId));
-        allow create: if canClass(request.resource.data.classId)
+        allow read: if isAdmin() || (resource != null && formOf(resource.data.classId));
+        allow create: if (isAdmin() || formOf(request.resource.data.classId))
           && (isAdmin() || request.resource.data.get('status', '') != 'approved');
-        allow update: if canClass(resource.data.classId) && canClass(request.resource.data.classId)
+        allow update: if (isAdmin() || (formOf(resource.data.classId) && formOf(request.resource.data.classId)))
           && (isAdmin() || (resource.data.get('status', '') != 'approved' && request.resource.data.get('status', '') != 'approved'));
-        allow delete: if isAdmin() || (canClass(resource.data.classId) && resource.data.get('status', '') != 'approved');
+        allow delete: if isAdmin() || (formOf(resource.data.classId) && resource.data.get('status', '') != 'approved');
       }
 
-      // Daily registers, one document per class per day.
+      // Scores and remarks per student per subject per term. Form teachers can read them to compile report cards.
+      match /subjectRecords/{recordId} {
+        allow read: if isAdmin() || (resource != null && (formOf(resource.data.classId) || teachesOffering(resource.data.offeringId)));
+        allow create: if isAdmin() || teachesOffering(request.resource.data.offeringId);
+        allow update: if isAdmin() || (teachesOffering(resource.data.offeringId) && request.resource.data.offeringId == resource.data.offeringId);
+        allow delete: if isAdmin() || teachesOffering(resource.data.offeringId);
+      }
+
+      // Registers: per arm per day (form teacher) or per subject lesson per day (subject teacher), as the school chooses.
       match /attendance/{dayId} {
-        allow read: if isAdmin() || (resource != null && teaches(resource.data.classId));
-        allow create: if canClass(request.resource.data.classId);
-        allow update: if canClass(resource.data.classId) && request.resource.data.classId == resource.data.classId;
+        allow read: if isAdmin() || (resource != null && (formOf(resource.data.classId) || teachesOffering(resource.data.get('offeringId', ''))));
+        allow create, update: if isAdmin()
+          || (policy().get('attendanceBy', 'form') == 'form' && request.resource.data.get('offeringId', '') == '' && formOf(request.resource.data.classId))
+          || (policy().get('attendanceBy', 'form') == 'subject' && teachesOffering(request.resource.data.get('offeringId', '')));
         allow delete: if isAdmin();
       }
 
-      // Audit ledger of AI requests: any member can add their own entry; admins read all, others read their own.
+      // Notice board.
+      match /notices/{noticeId} {
+        allow read: if isMember();
+        allow create, delete: if isAdmin();
+      }
+
+      // Audit ledger of AI requests: any member adds their own entries; admins read all, others their own.
       match /ledger/{entryId} {
         allow create: if isMember() && request.resource.data.uid == request.auth.uid;
         allow read: if isAdmin() || (isMember() && resource.data.uid == request.auth.uid);

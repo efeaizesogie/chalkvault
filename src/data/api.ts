@@ -16,18 +16,24 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { getDb } from '../lib/firebase';
-import type {
-  AttendanceDay,
-  ClassRoom,
-  Invite,
-  LedgerEntry,
-  Member,
-  Role,
-  School,
-  StudentProfile,
-  Term,
-  TermRecord,
-  UserSchools,
+import {
+  DEFAULT_POLICY,
+  type AttendanceDay,
+  type ClassRoom,
+  type Invite,
+  type LedgerEntry,
+  type Member,
+  type Notice,
+  type Offering,
+  type PublishedResult,
+  type Role,
+  type School,
+  type SchoolPolicy,
+  type StudentProfile,
+  type SubjectRecord,
+  type Term,
+  type TermRecord,
+  type UserSchools,
 } from './types';
 
 export const uid = () => crypto.randomUUID().replace(/-/g, '').slice(0, 20);
@@ -50,7 +56,14 @@ export const paths = {
   record: (s: string, t: string, st: string) => doc(getDb(), 'schools', s, 'records', `${t}_${st}`),
   ledger: (s: string) => collection(getDb(), 'schools', s, 'ledger'),
   attendance: (s: string) => collection(getDb(), 'schools', s, 'attendance'),
-  attendanceDay: (s: string, classId: string, date: string) => doc(getDb(), 'schools', s, 'attendance', `${classId}_${date}`),
+  attendanceDay: (s: string, groupId: string, date: string) => doc(getDb(), 'schools', s, 'attendance', `${groupId}_${date}`),
+  offerings: (s: string) => collection(getDb(), 'schools', s, 'offerings'),
+  offering: (s: string, o: string) => doc(getDb(), 'schools', s, 'offerings', o),
+  subjectRecords: (s: string) => collection(getDb(), 'schools', s, 'subjectRecords'),
+  subjectRecord: (s: string, t: string, o: string, st: string) => doc(getDb(), 'schools', s, 'subjectRecords', `${t}_${o}_${st}`),
+  notices: (s: string) => collection(getDb(), 'schools', s, 'notices'),
+  notice: (s: string, n: string) => doc(getDb(), 'schools', s, 'notices', n),
+  result: (pin: string) => doc(getDb(), 'results', pin),
   user: (u: string) => doc(getDb(), 'users', u),
 };
 
@@ -73,7 +86,11 @@ export interface NewSchool {
   termName: string;
   levels: string[];
   subjects: string[];
-  classes: { name: string; level: string; subject: string }[];
+  /** Arms to create, e.g. JSS 1A. Each gets every subject as an offering. */
+  classes: { name: string; level: string; arm?: string; subject: string }[];
+  arms?: string[];
+  session?: string;
+  policy?: Partial<SchoolPolicy>;
   demo?: boolean;
 }
 
@@ -89,9 +106,11 @@ export async function createSchool(user: { uid: string; name: string; email: str
     ownerId: user.uid,
     currentTermId: termId,
     levels: s.levels,
+    arms: s.arms ?? ['A', 'B'],
     subjects: s.subjects,
     colour: 'chalk',
     createdAt: now(),
+    policy: { ...DEFAULT_POLICY, ...(s.policy ?? {}) },
     ...(s.demo ? { demo: true } : {}),
   };
   await setDoc(paths.school(schoolId), school);
@@ -100,12 +119,27 @@ export async function createSchool(user: { uid: string; name: string; email: str
   await setDoc(paths.member(schoolId, user.uid), member);
   // 3) Everything else, now that the caller is a member.
   const b = writeBatch(getDb());
-  b.set(paths.term(schoolId, termId), { id: termId, name: s.termName, order: 1 } satisfies Term);
-  s.classes.forEach((c, i) => {
-    const id = uid();
-    b.set(paths.class(schoolId, id), { id, ...c, colour: colours[i % colours.length], createdAt: now() + i } satisfies ClassRoom);
-  });
+  b.set(paths.term(schoolId, termId), { id: termId, name: s.termName, order: 1, session: s.session ?? defaultSession() } satisfies Term);
   await b.commit();
+  // Arms and their subject offerings, in batches under Firestore's 500-write limit.
+  let batch = writeBatch(getDb());
+  let n = 0;
+  const flush = async () => {
+    if (n) await batch.commit();
+    batch = writeBatch(getDb());
+    n = 0;
+  };
+  for (const [i, c] of s.classes.entries()) {
+    const id = uid();
+    batch.set(paths.class(schoolId, id), { id, ...c, colour: colours[i % colours.length], createdAt: now() + i } satisfies ClassRoom);
+    n++;
+    for (const subject of s.subjects) {
+      const oid = uid();
+      batch.set(paths.offering(schoolId, oid), { id: oid, classId: id, subject, teacherIds: [], studentIds: null, createdAt: now() } satisfies Offering);
+      if (++n >= 450) await flush();
+    }
+  }
+  await flush();
   await rememberSchool(user.uid, schoolId, s.name, 'owner');
   return schoolId;
 }
@@ -153,9 +187,18 @@ export async function deleteClass(schoolId: string, classId: string) {
 }
 
 // ---------- Members & invites ----------
-export async function createInvite(schoolId: string, by: string, role: Invite['role'], classIds: string[], label: string) {
+export async function createInvite(
+  schoolId: string,
+  by: string,
+  role: Invite['role'],
+  classIds: string[],
+  label: string,
+  offerings: Offering[] = [],
+) {
   const code = uid() + uid();
-  await setDoc(paths.invite(schoolId, code), { code, role, classIds, label, createdBy: by, createdAt: now() } satisfies Invite);
+  const offeringIds = offerings.map((o) => o.id);
+  const subjectClassIds = [...new Set(offerings.map((o) => o.classId))];
+  await setDoc(paths.invite(schoolId, code), { code, role, classIds, offeringIds, subjectClassIds, label, createdBy: by, createdAt: now() } satisfies Invite);
   return code;
 }
 export async function revokeInvite(schoolId: string, code: string) {
@@ -172,10 +215,14 @@ export async function acceptInvite(user: { uid: string; name: string; email: str
     email: user.email,
     role: invite.role,
     classIds: invite.classIds,
+    offeringIds: invite.offeringIds ?? [],
+    subjectClassIds: invite.subjectClassIds ?? [],
     inviteCode: invite.code,
     joinedAt: now(),
   };
   await setDoc(paths.member(schoolId, user.uid), member);
+  // Show this teacher on the subjects they were invited to teach (rules allow a teacher to add only themselves).
+  for (const oid of invite.offeringIds ?? []) await updateDoc(paths.offering(schoolId, oid), { teacherIds: arrayUnion(user.uid) }).catch(() => {});
   const school = (await getDoc(paths.school(schoolId))).data() as School;
   await rememberSchool(user.uid, schoolId, school.name, invite.role);
 }
@@ -243,6 +290,62 @@ export const todayISO = () => {
   const d = new Date();
   return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().slice(0, 10);
 };
+
+// ---------- Policy ----------
+export const policyOf = (s: School): SchoolPolicy => ({ ...DEFAULT_POLICY, ...(s.policy ?? {}) });
+export function defaultSession() {
+  const d = new Date();
+  const y = d.getMonth() >= 7 ? d.getFullYear() : d.getFullYear() - 1; // Nigerian sessions start in September
+  return `${y}/${y + 1}`;
+}
+
+// ---------- Offerings (a subject in an arm) ----------
+export async function saveOffering(schoolId: string, o: Offering) {
+  await setDoc(paths.offering(schoolId, o.id), o);
+}
+export async function deleteOffering(schoolId: string, o: Offering, members: Member[]) {
+  for (const m of members.filter((x) => x.offeringIds?.includes(o.id))) await setTeaching(schoolId, m, o, false, []);
+  await deleteDoc(paths.offering(schoolId, o.id));
+}
+/** Assign or unassign a teacher to a subject offering, keeping both sides in step (rules read the member side). */
+export async function setTeaching(schoolId: string, m: Member, o: Offering, on: boolean, allOfferings: Offering[]) {
+  const offeringIds = on ? [...new Set([...(m.offeringIds ?? []), o.id])] : (m.offeringIds ?? []).filter((x) => x !== o.id);
+  const subjectClassIds = [...new Set(allOfferings.filter((x) => offeringIds.includes(x.id)).map((x) => x.classId).concat(on ? [o.classId] : []))];
+  const b = writeBatch(getDb());
+  b.update(paths.member(schoolId, m.uid), { offeringIds, subjectClassIds });
+  b.update(paths.offering(schoolId, o.id), { teacherIds: on ? arrayUnion(m.uid) : arrayRemove(m.uid) });
+  await b.commit();
+}
+
+// ---------- Subject records ----------
+export async function saveSubjectRecord(schoolId: string, by: string, r: Partial<SubjectRecord> & Pick<SubjectRecord, 'termId' | 'offeringId' | 'classId' | 'studentId' | 'subject'>) {
+  const patch = Object.fromEntries(Object.entries(r).map(([k, v]) => [k, v === undefined ? deleteField() : v]));
+  await setDoc(paths.subjectRecord(schoolId, r.termId, r.offeringId, r.studentId), { ...patch, updatedAt: now(), updatedBy: by }, { merge: true });
+}
+
+// ---------- Notices ----------
+export async function addNotice(schoolId: string, n: Omit<Notice, 'id' | 'at'>) {
+  const id = uid();
+  await setDoc(paths.notice(schoolId, id), { ...n, id, at: now() } satisfies Notice);
+}
+export async function deleteNotice(schoolId: string, id: string) {
+  await deleteDoc(paths.notice(schoolId, id));
+}
+
+// ---------- Result PINs and publishing ----------
+const PIN_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+export function newPin() {
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  const s = [...bytes].map((b) => PIN_ALPHABET[b % PIN_ALPHABET.length]).join('');
+  return `${s.slice(0, 4)}-${s.slice(4, 8)}-${s.slice(8, 12)}`;
+}
+export async function publishResult(r: PublishedResult) {
+  await setDoc(paths.result(r.pin), r);
+}
+export async function readResult(pin: string) {
+  const snap = await getDoc(paths.result(pin.trim().toUpperCase()));
+  return snap.exists() ? (snap.data() as PublishedResult) : null;
+}
 
 // ---------- Ledger ----------
 export async function addLedger(schoolId: string, e: Omit<LedgerEntry, 'id' | 'at'>) {

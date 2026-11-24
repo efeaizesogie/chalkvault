@@ -5,6 +5,9 @@ import { createSchool } from '../data/api';
 import { COUNTRIES, COUNTRY_PRESETS } from '../school/presets';
 import { useToast } from '../ui/toast';
 import { AuthShell } from './AuthShell';
+import type { SchoolPolicy } from '../data/types';
+
+const armNames = (s: string) => s.split(',').map((x) => x.trim()).filter(Boolean);
 
 type Step = 0 | 1 | 2;
 
@@ -18,7 +21,9 @@ export function Start() {
   const [term, setTerm] = useState(COUNTRY_PRESETS.Nigeria.term);
   const [levels, setLevels] = useState<string[]>(COUNTRY_PRESETS.Nigeria.levels);
   const [subjects, setSubjects] = useState<string>(COUNTRY_PRESETS.Nigeria.subjects.join('\n'));
-  const [classes, setClasses] = useState<string>('');
+  const [arms, setArms] = useState('A, B');
+  const [attendanceBy, setAttendanceBy] = useState<SchoolPolicy['attendanceBy']>('form');
+  const [formPer, setFormPer] = useState<SchoolPolicy['formClassesPerTeacher']>('one');
   const [busy, setBusy] = useState(false);
 
   if (!ready) return null;
@@ -37,13 +42,20 @@ export function Start() {
   const finish = async () => {
     setBusy(true);
     try {
-      const classList = lines(classes).map((n) => {
-        const level = levels.find((l) => n.toLowerCase().startsWith(l.toLowerCase())) ?? levels[0] ?? '';
-        return { name: n, level, subject: '' };
-      });
+      const armList = armNames(arms);
+      const classList = levels.flatMap((level) => armList.map((arm) => ({ name: `${level}${arm.length <= 2 ? '' : ' '}${arm}`, level, arm, subject: '' })));
       const id = await createSchool(
         { uid: user.uid, name: displayName(user), email: user.email ?? '' },
-        { name: name.trim(), country, termName: term.trim() || 'Term 1', levels, subjects: lines(subjects), classes: classList },
+        {
+          name: name.trim(),
+          country,
+          termName: term.trim() || 'Term 1',
+          levels,
+          arms: armList,
+          subjects: lines(subjects),
+          classes: classList,
+          policy: { attendanceBy, formClassesPerTeacher: formPer },
+        },
       );
       nav(`/s/${id}`, { replace: true });
     } catch (e) {
@@ -53,7 +65,7 @@ export function Start() {
   };
 
   return (
-    <AuthShell note={`Step ${step + 1} of 3`} title={['Name your school', 'Set up your school year', 'Add your first classes'][step]} wide>
+    <AuthShell note={`Step ${step + 1} of 3`} title={['Name your school', 'Classes and subjects', 'Arms and school rules'][step]} wide>
       <div className="auth-card wizard">
         {step === 0 && (
           <>
@@ -110,16 +122,29 @@ export function Start() {
         {step === 2 && (
           <>
             <label className="field">
-              <span className="mono">Class names, one per line (optional)</span>
-              <textarea
-                className="ruled"
-                rows={6}
-                value={classes}
-                onChange={(e) => setClasses(e.target.value)}
-                placeholder={`${levels[0] ?? 'Year 1'} A\n${levels[0] ?? 'Year 1'} B\n${levels[1] ?? 'Year 2'} A`}
-                autoFocus
-              />
-              <small className="muted">You can add students to each class once you’re in.</small>
+              <span className="mono">Arms in each class, separated by commas</span>
+              <input value={arms} onChange={(e) => setArms(e.target.value)} placeholder="A, B, C or Gold, Diamond" autoFocus />
+              <small className="muted">
+                Creates {levels.length * armNames(arms).length} arms, such as {levels[0] ?? 'JSS 1'}
+                {armNames(arms)[0] ?? 'A'} and {levels[0] ?? 'JSS 1'}
+                {armNames(arms)[1] ?? 'B'}, each with all {lines(subjects).length} subjects. You can add or remove arms later.
+              </small>
+            </label>
+            <label className="field">
+              <span className="mono">Who takes attendance</span>
+              <select value={attendanceBy} onChange={(e) => setAttendanceBy(e.target.value as SchoolPolicy['attendanceBy'])}>
+                <option value="form">The form teacher, once a day</option>
+                <option value="subject">Each subject teacher, every lesson</option>
+                <option value="admin">Admins only</option>
+              </select>
+            </label>
+            <label className="field">
+              <span className="mono">A teacher can be form teacher of</span>
+              <select value={formPer} onChange={(e) => setFormPer(e.target.value as SchoolPolicy['formClassesPerTeacher'])}>
+                <option value="one">One arm only</option>
+                <option value="many">More than one arm</option>
+              </select>
+              <small className="muted">You can change every rule later in Settings.</small>
             </label>
           </>
         )}

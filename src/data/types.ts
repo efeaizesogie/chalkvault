@@ -13,6 +13,37 @@ export const CLASS_COLOURS = {
 export type ClassColour = keyof typeof CLASS_COLOURS;
 export const COLOUR_KEYS = Object.keys(CLASS_COLOURS) as ClassColour[];
 
+/** How each school chooses to run itself. Every rule is the school's call. */
+export interface SchoolPolicy {
+  /** Who takes the register: the form teacher once a day, each subject teacher per lesson, or admins only. */
+  attendanceBy: 'form' | 'subject' | 'admin';
+  /** Can a teacher be form teacher of more than one arm? */
+  formClassesPerTeacher: 'one' | 'many';
+  /** Can teachers add, edit and remove students in their arms? Otherwise admins only. */
+  teachersManageStudents: boolean;
+  /** Must comments be approved by an admin before results are published? */
+  approvalRequired: boolean;
+  /** Do subject teachers write a short remark per subject on the report card? */
+  subjectRemarks: boolean;
+  /** Show class and subject positions on report cards? */
+  showPositions: boolean;
+  /** Allow score-sheet photos (which show names) to be read in the cloud when on-device AI is unavailable. */
+  cloudScanning: boolean;
+  /** Allow comments to be written in the cloud (names removed) when on-device AI is unavailable. */
+  cloudCommentFallback: boolean;
+}
+
+export const DEFAULT_POLICY: SchoolPolicy = {
+  attendanceBy: 'form',
+  formClassesPerTeacher: 'one',
+  teachersManageStudents: true,
+  approvalRequired: true,
+  subjectRemarks: true,
+  showPositions: true,
+  cloudScanning: false,
+  cloudCommentFallback: true,
+};
+
 export interface School {
   id: string;
   name: string;
@@ -20,16 +51,22 @@ export interface School {
   ownerId: string;
   currentTermId: string;
   levels: string[];
+  /** Arm names used when creating classes, e.g. A, B, C or Gold, Diamond. */
+  arms?: string[];
   subjects: string[];
   colour: ClassColour;
   demo?: boolean;
   createdAt: number;
+  address?: string;
+  motto?: string;
+  principalName?: string;
   /** Score components, e.g. CA 1 (20), CA 2 (20), Exam (60). */
   assessments?: { key: string; label: string; max: number }[];
   /** Grade bands by percentage, highest first. */
   gradeBands?: { grade: string; min: number; remark: string }[];
   /** Maximum characters for a report comment. */
   commentLimit?: number;
+  policy?: Partial<SchoolPolicy>;
 }
 
 export interface Member {
@@ -37,7 +74,12 @@ export interface Member {
   name: string;
   email: string;
   role: Role;
+  /** Arms this person is form teacher of. (Field name kept from v1.) */
   classIds: string[];
+  /** Subject offerings this person teaches. */
+  offeringIds?: string[];
+  /** Arms where this person teaches at least one subject (lets rules show them those students). */
+  subjectClassIds?: string[];
   inviteCode?: string;
   joinedAt: number;
 }
@@ -46,6 +88,8 @@ export interface Invite {
   code: string;
   role: Exclude<Role, 'owner'>;
   classIds: string[];
+  offeringIds?: string[];
+  subjectClassIds?: string[];
   label: string;
   createdBy: string;
   createdAt: number;
@@ -55,14 +99,32 @@ export interface Term {
   id: string;
   name: string;
   order: number;
+  /** Academic session, e.g. 2026/2027. */
+  session?: string;
+  /** Shown on report cards. */
+  nextTermBegins?: string;
 }
 
+/** An arm of a class level, e.g. JSS 1A. Stored in the `classes` collection. */
 export interface ClassRoom {
   id: string;
   name: string;
   level: string;
+  arm?: string;
+  /** v1 field: a single subject per class. Unused in v2. */
   subject: string;
   colour: ClassColour;
+  createdAt: number;
+}
+
+/** One subject taught in one arm, with its teachers and the students taking it. */
+export interface Offering {
+  id: string;
+  classId: string;
+  subject: string;
+  teacherIds: string[];
+  /** Students taking this subject. null means everyone in the arm. */
+  studentIds: string[] | null;
   createdAt: number;
 }
 
@@ -85,6 +147,8 @@ export interface StudentProfile {
   guardians: Guardian[];
   order: number;
   createdAt: number;
+  /** Private code a parent uses to see published results. */
+  resultPin?: string;
 }
 
 export const SUPPORT_FLAGS = ['none', 'academic', 'attendance', 'wellbeing'] as const;
@@ -104,21 +168,36 @@ export interface Draft {
   updatedAt: number;
 }
 
-/** One student's work for one term: private notes and the report comment. */
+/** The form teacher's record for one student for one term: private notes, the comment, the principal's comment. */
 export interface TermRecord {
   termId: string;
   studentId: string;
-  /** The student's class when the record was written. Rules use it to limit teacher access. */
+  /** The student's arm when the record was written. Rules use it to limit teacher access. */
   classId: string;
   notes: string;
   draft?: Draft;
   final?: string;
   translation?: { language: string; text: string; at: number; source?: Source };
-  /** Scores by assessment key. */
+  /** v1 only: single-subject scores. */
   scores?: Record<string, number>;
   /** Approval: a teacher submits; an owner or admin approves, which locks the comment. */
   status?: 'submitted' | 'approved';
   approvedBy?: string;
+  principalComment?: string;
+  updatedAt: number;
+  updatedBy: string;
+}
+
+/** One student's scores and remark in one subject for one term. */
+export interface SubjectRecord {
+  termId: string;
+  offeringId: string;
+  classId: string;
+  studentId: string;
+  subject: string;
+  scores: Record<string, number>;
+  remark?: string;
+  remarkSource?: Source;
   updatedAt: number;
   updatedBy: string;
 }
@@ -126,15 +205,26 @@ export interface TermRecord {
 export type Mark = 'P' | 'L' | 'A';
 export const MARK_LABEL: Record<Mark, string> = { P: 'Present', L: 'Late', A: 'Absent' };
 
-/** One class register for one day. */
+/** One register for one day: for an arm (form teacher) or a subject lesson (subject teacher). */
 export interface AttendanceDay {
-  id: string; // `${classId}_${date}`
+  id: string; // `${classId}_${date}` or `${offeringId}_${date}`
   classId: string;
+  offeringId?: string;
   termId: string;
   date: string; // YYYY-MM-DD
   marks: Record<string, Mark>; // studentId -> mark
   takenBy: string;
   updatedAt: number;
+}
+
+export interface Notice {
+  id: string;
+  title: string;
+  body: string;
+  audience: 'staff' | 'parents';
+  at: number;
+  by: string;
+  byName: string;
 }
 
 export interface LedgerEntry {
@@ -147,7 +237,7 @@ export interface LedgerEntry {
   detail: string;
 }
 
-/** What the class sheet and student desk work with: a profile joined with this term's record. */
+/** What the comment sheet and desk work with: a profile joined with this term's form record. */
 export interface Student {
   id: string;
   classId: string;
@@ -163,4 +253,35 @@ export interface Student {
 
 export interface UserSchools {
   schools: Record<string, { name: string; role: Role }>;
+}
+
+/** A compiled report card, as printed and as published to the result portal. */
+export interface ReportCard {
+  termId: string;
+  termName: string;
+  session: string;
+  className: string;
+  assessments: { key: string; label: string; max: number }[];
+  subjects: { subject: string; scores: Record<string, number>; total: number; grade: string; remark: string; position?: string; teacherRemark?: string }[];
+  average: number;
+  position?: string;
+  classSize: number;
+  attendance?: { present: number; days: number };
+  formComment?: string;
+  principalComment?: string;
+  nextTermBegins?: string;
+  gradeKey: { grade: string; min: number; remark: string }[];
+  publishedAt?: number;
+}
+
+/** Top-level `results/{pin}`: what a parent sees with the result PIN. */
+export interface PublishedResult {
+  pin: string;
+  schoolId: string;
+  schoolName: string;
+  schoolAddress?: string;
+  studentName: string;
+  admissionNo: string;
+  reports: Record<string, ReportCard>;
+  updatedAt: number;
 }
