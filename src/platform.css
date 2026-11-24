@@ -375,3 +375,6 @@ a.ticket, a.pill { text-decoration: none; display: inline-flex; align-items: cen
   .print-cards ~ * { display: none; }
   .slip-card { break-inside: avoid; }
 }
+
+.past-banner { background: var(--ink); color: var(--sheet); padding: 9px 24px; font-size: 14px; }
+.past-banner .link { color: var(--ticket); }

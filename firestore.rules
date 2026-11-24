@@ -42,6 +42,11 @@ service cloud.firestore {
       function subjectIn(classId) { return isMember() && classId in me().get('subjectClassIds', []); }
       function teachesOffering(offeringId) { return isMember() && offeringId in me().get('offeringIds', []); }
       function seesClass(classId) { return isAdmin() || formOf(classId) || subjectIn(classId); }
+      // A closed term is read-only for everyone except the owner (who can correct a mistake after closing).
+      function termOpen(termId) {
+        return isOwner() || !exists(/databases/$(database)/documents/schools/$(schoolId)/terms/$(termId))
+          || get(/databases/$(database)/documents/schools/$(schoolId)/terms/$(termId)).data.get('status', 'open') != 'closed';
+      }
       function managesStudents(classId) { return isAdmin() || (formOf(classId) && policy().get('teachersManageStudents', true) == true); }
       function invitePath(code) { return /databases/$(database)/documents/schools/$(schoolId)/invites/$(code); }
 
@@ -113,9 +118,9 @@ service cloud.firestore {
       // Only owners and admins approve; an approved record is locked for teachers.
       match /records/{recordId} {
         allow read: if isAdmin() || (resource != null && formOf(resource.data.classId));
-        allow create: if (isAdmin() || formOf(request.resource.data.classId))
+        allow create: if termOpen(request.resource.data.termId) && (isAdmin() || formOf(request.resource.data.classId))
           && (isAdmin() || request.resource.data.get('status', '') != 'approved');
-        allow update: if (isAdmin() || (formOf(resource.data.classId) && formOf(request.resource.data.classId)))
+        allow update: if termOpen(resource.data.termId) && (isAdmin() || (formOf(resource.data.classId) && formOf(request.resource.data.classId)))
           && (isAdmin() || (resource.data.get('status', '') != 'approved' && request.resource.data.get('status', '') != 'approved'));
         allow delete: if isAdmin() || (formOf(resource.data.classId) && resource.data.get('status', '') != 'approved');
       }
@@ -123,17 +128,17 @@ service cloud.firestore {
       // Scores and remarks per student per subject per term. Form teachers can read them to compile report cards.
       match /subjectRecords/{recordId} {
         allow read: if isAdmin() || (resource != null && (formOf(resource.data.classId) || teachesOffering(resource.data.offeringId)));
-        allow create: if isAdmin() || teachesOffering(request.resource.data.offeringId);
-        allow update: if isAdmin() || (teachesOffering(resource.data.offeringId) && request.resource.data.offeringId == resource.data.offeringId);
+        allow create: if termOpen(request.resource.data.termId) && (isAdmin() || teachesOffering(request.resource.data.offeringId));
+        allow update: if termOpen(resource.data.termId) && (isAdmin() || (teachesOffering(resource.data.offeringId) && request.resource.data.offeringId == resource.data.offeringId));
         allow delete: if isAdmin() || teachesOffering(resource.data.offeringId);
       }
 
       // Registers: per arm per day (form teacher) or per subject lesson per day (subject teacher), as the school chooses.
       match /attendance/{dayId} {
         allow read: if isAdmin() || (resource != null && (formOf(resource.data.classId) || teachesOffering(resource.data.get('offeringId', ''))));
-        allow create, update: if isAdmin()
+        allow create, update: if termOpen(request.resource.data.termId) && (isAdmin()
           || (policy().get('attendanceBy', 'form') == 'form' && request.resource.data.get('offeringId', '') == '' && formOf(request.resource.data.classId))
-          || (policy().get('attendanceBy', 'form') == 'subject' && teachesOffering(request.resource.data.get('offeringId', '')));
+          || (policy().get('attendanceBy', 'form') == 'subject' && teachesOffering(request.resource.data.get('offeringId', ''))));
         allow delete: if isAdmin();
       }
 
@@ -191,6 +196,9 @@ service cloud.firestore {
       match /loans/{id} { allow read, write: if isMember(); }
       match /routes/{id} { allow read: if isMember(); allow write: if isAdmin(); }
       match /inventory/{id} { allow read: if isMember(); allow write: if isAdmin(); }
+
+      // Saved figures for each term (dashboard history).
+      match /termSummaries/{id} { allow read, write: if isAdmin(); }
 
       // Notice board.
       match /notices/{noticeId} {

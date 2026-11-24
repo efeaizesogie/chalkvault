@@ -104,6 +104,40 @@ export interface Term {
   session?: string;
   /** Shown on report cards. */
   nextTermBegins?: string;
+  /** planned → open → results → closed. Closed terms are read-only. */
+  status?: 'planned' | 'open' | 'results' | 'closed';
+  starts?: string;
+  ends?: string;
+  midtermFrom?: string;
+  midtermTo?: string;
+  examsFrom?: string;
+  /** Arms whose results were published to parents this term. */
+  publishedArms?: string[];
+  closedAt?: number;
+}
+
+/** A term's figures, saved so earlier terms can be compared without reloading every record. */
+export interface TermSummary {
+  id: string; // termId
+  termName: string;
+  session: string;
+  students: number;
+  byLevel: Record<string, number>;
+  attendancePct: number | null;
+  attendanceByArm: Record<string, number>;
+  weeklyAttendance: { week: string; pct: number }[];
+  average: number | null;
+  subjectAverages: Record<string, number>;
+  armAverages: Record<string, number>;
+  grades: Record<string, number>;
+  atRisk: number;
+  scoresEntered: number;
+  scoresExpected: number;
+  commentsWritten: number;
+  commentsApproved: number;
+  feesExpected: number;
+  feesCollected: number;
+  computedAt: number;
 }
 
 /** An arm of a class level, e.g. JSS 1A. Stored in the `classes` collection. */

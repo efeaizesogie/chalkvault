@@ -392,7 +392,8 @@ export type ModuleName =
   | 'books'
   | 'loans'
   | 'routes'
-  | 'inventory';
+  | 'inventory'
+  | 'termSummaries';
 export const mod = (s: string, name: ModuleName) => collection(getDb(), 'schools', s, name);
 export const modDoc = (s: string, name: ModuleName, id: string) => doc(getDb(), 'schools', s, name, id);
 /** Create or replace a document in a module collection. Gives it an id if it has none. */

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, NavLink, Navigate, Outlet, useNavigate, useParams } from 'react-router-dom';
 import { query, where } from 'firebase/firestore';
 import { useAuth } from '../auth/AuthProvider';
-import { addLedger, ledgerQuery, paths, updateSchool } from '../data/api';
+import { addLedger, ledgerQuery, paths } from '../data/api';
 import { useQuery } from '../data/hooks';
 import { CLASS_COLOURS, type LedgerEntry } from '../data/types';
 import { deviceStatus, type DeviceStatus } from '../lib/ai';
@@ -50,7 +50,7 @@ export function Workspace() {
 }
 
 function Frame() {
-  const { school, schoolId, me, isAdmin, terms, term, formClasses, myOfferings, classes } = useSchool();
+  const { school, schoolId, me, isAdmin, terms, term, currentTerm, viewingPast, termClosed, setViewTerm, formClasses, myOfferings, classes } = useSchool();
   const { user, signOut } = useAuth();
   const nav = useNavigate();
   const toast = useToast();
@@ -91,16 +91,18 @@ function Frame() {
             Chalkvault
           </Link>
           <span className="school-badge">{school.name}</span>
-          {isAdmin && terms.length > 1 ? (
+          {terms.length > 1 ? (
             <select
               className="term-select mono"
               value={term?.id ?? ''}
-              onChange={(e) => updateSchool(schoolId, { currentTermId: e.target.value }).catch((err) => toast((err as Error).message, 'error'))}
-              aria-label="Current term"
+              onChange={(e) => setViewTerm(e.target.value === currentTerm?.id ? null : e.target.value)}
+              aria-label="Term you are looking at"
             >
-              {terms.map((t) => (
+              {[...terms].reverse().map((t) => (
                 <option key={t.id} value={t.id}>
                   {t.name}
+                  {t.session ? `, ${t.session}` : ''}
+                  {t.id === currentTerm?.id ? ' (current)' : t.status === 'closed' ? ' (closed)' : ''}
                 </option>
               ))}
             </select>
@@ -139,6 +141,16 @@ function Frame() {
         </div>
       </header>
 
+      {viewingPast && (
+        <div className="past-banner">
+          You’re looking at {term?.name}
+          {term?.session ? `, ${term.session}` : ''}
+          {termClosed ? '. It’s closed, so nothing can be changed.' : '. Changes you make apply to that term.'}{' '}
+          <button className="link" onClick={() => setViewTerm(null)}>
+            Back to {currentTerm?.name}
+          </button>
+        </div>
+      )}
       {school.demo && (
         <div className="demo-banner">
           <span className="mono">Demo school</span> Students and notes are made up. Everything you do here is private to this browser.{' '}
