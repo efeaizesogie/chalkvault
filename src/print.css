@@ -75,7 +75,9 @@
   .doc h1 { font: 400 22px/1.2 var(--serif); margin: 0 0 2px; }
   .doc .doc-sub { color: var(--print-ink-2); margin: 0 0 12px; }
   .doc h2 { font: 600 12px/1.3 var(--sans); margin: 16px 0 6px; padding-bottom: 3px; border-bottom: 1px solid var(--ink); break-after: avoid; }
-  .doc section { break-inside: avoid; }
+  /* Short sections stay whole; long tables flow across pages, repeating their header row. */
+  .doc section.keep, .doc .doc-kpis, .doc .cols > section { break-inside: avoid; }
+  .doc h2 + table, .doc h2 + .group-sum { break-before: avoid; }
   .doc .doc-kpis { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); border: 1px solid var(--ink); }
   .doc .doc-kpis > div { padding: 8px 10px; border-right: 1px solid var(--print-rule); display: grid; gap: 2px; }
   .doc .doc-kpis > div:last-child { border-right: 0; }
@@ -88,7 +90,9 @@
   .doc th { text-align: left; font-weight: 600; border-bottom: 1px solid var(--ink); padding: 4px 5px; white-space: nowrap; }
   .doc td { border-bottom: 1px solid var(--print-rule); padding: 3px 5px; vertical-align: middle; }
   .doc tbody tr:nth-child(even) td { background: var(--paper); }
-  .doc td.num, .doc th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  #print-root .doc td.num, #print-root .doc th.num { text-align: right; font-variant-numeric: tabular-nums; }
+  #print-root .doc tr.subtotal td { font-weight: 600; border-top: 1px solid var(--ink); background: var(--sheet); }
+  .doc .group-sum { color: var(--print-ink-2); font-size: 10px; margin: -2px 0 4px; }
   .doc .bar { display: inline-block; width: 60px; height: 6px; background: var(--paper-2); border-radius: 3px; vertical-align: middle; margin-right: 6px; overflow: hidden; }
   .doc .bar i { display: block; height: 100%; background: var(--series-now); border-radius: 0 3px 3px 0; }
   .doc .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }

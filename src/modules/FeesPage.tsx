@@ -11,7 +11,8 @@ import { useToast } from '../ui/toast';
 import { useSchool } from '../school/SchoolContext';
 import type { WorkspaceCtx } from '../school/Workspace';
 import { PrintExport } from '../components/PrintExport';
-import { downloadCsv, printParts } from '../lib/print';
+import { downloadCsv, printDoc, printParts } from '../lib/print';
+import { tableDoc } from '../lib/printDocs';
 import './fees.css';
 
 type Tab = 'overview' | 'invoices' | 'payments' | 'items';
@@ -82,6 +83,36 @@ export function FeesPage() {
   const outstanding = termInvoices.reduce((n, i) => n + Math.max(0, i.balance), 0);
   const nameOf = (id: string) => studentsQ.data.find((s) => s.id === id)?.name ?? 'Student';
   const armOf = (id: string) => classes.find((c) => c.id === id)?.name ?? '';
+  /** The fees statement for the term: totals and each arm first, then every family by arm with subtotals. */
+  const printFees = () => {
+    const title = `Fees, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`;
+    const sum = (list: typeof termInvoices, k: 'total' | 'paid' | 'balance') => list.reduce((n, i) => n + i[k], 0);
+    const total = sum(termInvoices, 'total');
+    const paid = sum(termInvoices, 'paid');
+    const owing = termInvoices.filter((i) => i.balance > 0);
+    const arms = [...new Set(termInvoices.map((i) => i.classId))].sort((a, b) => armOf(a).localeCompare(armOf(b), undefined, { numeric: true }));
+    const n = (v: number) => `₦${Math.round(v).toLocaleString('en-NG')}`;
+    const intro = `<div class="doc-kpis">
+        <div><span>Expected</span><b>${n(total)}</b><i>${termInvoices.length} invoices</i></div>
+        <div><span>Collected</span><b>${n(paid)}</b><i>${total ? Math.round((paid / total) * 100) : 0}% of expected</i></div>
+        <div><span>Outstanding</span><b>${n(total - paid)}</b><i>${owing.length} families owing</i></div>
+      </div>
+      <section class="keep"><h2>By arm</h2><table><thead><tr><th>Arm</th><th class="num">Invoices</th><th class="num">Expected</th><th class="num">Collected</th><th class="num">Collected %</th><th class="num">Outstanding</th><th class="num">Owing</th></tr></thead><tbody>${arms
+        .map((a) => {
+          const l = termInvoices.filter((i) => i.classId === a);
+          const t = sum(l, 'total');
+          const p = sum(l, 'paid');
+          return `<tr><td>${armOf(a)}</td><td class="num">${l.length}</td><td class="num">${n(t)}</td><td class="num">${n(p)}</td><td class="num">${t ? Math.round((p / t) * 100) : 0}%</td><td class="num">${n(t - p)}</td><td class="num">${l.filter((i) => i.balance > 0).length}</td></tr>`;
+        })
+        .join('')}</tbody></table></section>`;
+    const rows: (string | number)[][] = [
+      ['Student', 'Arm', 'Fees', 'Discounts', 'Arrears', 'Total', 'Paid', 'Balance'],
+      ...[...termInvoices]
+        .sort((a, b) => armOf(a.classId).localeCompare(armOf(b.classId), undefined, { numeric: true }) || nameOf(a.studentId).localeCompare(nameOf(b.studentId)))
+        .map((i) => [nameOf(i.studentId), armOf(i.classId), i.lines.reduce((m, l) => m + l.amount, 0), i.discounts.reduce((m, l) => m + l.amount, 0), i.arrears, i.total, i.paid, i.balance]),
+    ];
+    printDoc(title, tableDoc('Fees statement', rows, { subtitle: title, intro, sum: ['Fees', 'Discounts', 'Arrears', 'Total', 'Paid', 'Balance'] }));
+  };
 
   return (
     <div className="page">
@@ -96,6 +127,7 @@ export function FeesPage() {
         <PrintExport
           title={`Fees, ${term?.name ?? ''}${term?.session ? ` ${term.session}` : ''}`}
           exportLabel="Export invoices"
+          onPrint={printFees}
           rows={() => [
             ['Student', 'Arm', 'Fees', 'Discounts', 'Arrears', 'Total', 'Paid', 'Balance'],
             ...[...termInvoices]

@@ -162,27 +162,60 @@ export type { TimetableSlot };
 
 /**
  * A list as a document: the same rows a CSV export gives, set as tables. Blank rows split sections; each
- * section's first row is its header. Numbers are right-aligned.
+ * section's first row is its header. A long list with an Arm or Class column is grouped by it, one heading per
+ * arm with a count and subtotals, and grand totals at the end. Numbers are right-aligned.
  */
-export function tableDoc(title: string, rows: (string | number | null | undefined)[][], subtitle?: string) {
-  const sections: (typeof rows)[] = [[]];
+export function tableDoc(
+  title: string,
+  rows: (string | number | null | undefined)[][],
+  opts: { subtitle?: string; intro?: string; groupBy?: string | false; sum?: string[] } = {},
+) {
+  type Row = (string | number | null | undefined)[];
+  const sections: Row[][] = [[]];
   for (const r of rows) {
     if (!r.length || r.every((c) => c === '' || c === null || c === undefined)) {
       if (sections[sections.length - 1].length) sections.push([]);
     } else sections[sections.length - 1].push(r);
   }
-  const isNum = (v: unknown) => typeof v === 'number' || /^[₦\d,.%\s-]+$/.test(String(v ?? '')) && /\d/.test(String(v ?? ''));
+  const isNum = (v: unknown) => typeof v === 'number' || (/^[₦\d,.%\s-]+$/.test(String(v ?? '')) && /\d/.test(String(v ?? '')));
+  const fmt = (v: unknown) => (typeof v === 'number' ? v.toLocaleString('en-NG') : esc(v));
+  const table = (head: Row, body: Row[], totals?: Row) => {
+    const sample = body.length ? body : totals ? [totals.map((v, i) => (i === 0 ? 0 : v))] : [];
+    const num = head.map((_, i) => sample.length > 0 && sample.every((r) => r[i] === '' || r[i] === null || r[i] === undefined || isNum(r[i])));
+    const tr = (r: Row, cls = '') => `<tr${cls ? ` class="${cls}"` : ''}>${head.map((_, i) => `<td${num[i] ? ' class="num"' : ''}>${fmt(r[i])}</td>`).join('')}</tr>`;
+    return `<table><thead><tr>${head.map((h, i) => `<th${num[i] ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>${body.map((r) => tr(r)).join('')}${totals ? tr(totals, 'subtotal') : ''}</tbody></table>`;
+  };
+  const sumRow = (head: Row, body: Row[], label: string) => {
+    if (!opts.sum?.length) return undefined;
+    const out: Row = head.map(() => '');
+    out[0] = label;
+    head.forEach((h, i) => {
+      if (opts.sum!.includes(String(h))) out[i] = body.reduce<number>((n, r) => n + (typeof r[i] === 'number' ? (r[i] as number) : 0), 0);
+    });
+    return out;
+  };
+
   const body = sections
-    .filter((s) => s.length)
-    .map((s) => {
-      const [head, ...rest] = s;
+    .filter((sec) => sec.length)
+    .map((sec) => {
+      const [head, ...rest] = sec;
       if (!rest.length) return `<p class="doc-sub">${head.map(esc).join(' ')}</p>`;
-      const num = head.map((_, i) => rest.every((r) => r[i] === '' || r[i] === null || r[i] === undefined || isNum(r[i])));
-      const fmt = (v: unknown) => (typeof v === 'number' && Math.abs(v) >= 1000 ? v.toLocaleString('en-NG') : esc(v));
-      return `<section><table><thead><tr>${head.map((h, i) => `<th${num[i] ? ' class="num"' : ''}>${esc(h)}</th>`).join('')}</tr></thead><tbody>${rest
-        .map((r) => `<tr>${head.map((_, i) => `<td${num[i] ? ' class="num"' : ''}>${fmt(r[i])}</td>`).join('')}</tr>`)
-        .join('')}</tbody></table></section>`;
+      const gName = opts.groupBy === false ? null : opts.groupBy ?? head.find((h) => h === 'Arm' || h === 'Class');
+      const gi = gName ? head.indexOf(gName) : -1;
+      if (gi < 0 || rest.length < 12) return `<section>${table(head, rest, sumRow(head, rest, 'Total'))}</section>`;
+      // Grouped: drop the group column from each table; its name is the heading.
+      const keep = head.map((_, i) => i).filter((i) => i !== gi);
+      const pick = (r: Row) => keep.map((i) => r[i]);
+      const groups = new Map<string, Row[]>();
+      for (const r of rest) groups.set(String(r[gi] ?? ''), [...(groups.get(String(r[gi] ?? '')) ?? []), r]);
+      const h2 = pick(head);
+      const parts = [...groups].map(([g, list]) => {
+        const sub = sumRow(h2, list.map(pick), `${g} total`);
+        return `<section><h2>${esc(g || 'No arm')}</h2><p class="group-sum">${list.length} ${list.length === 1 ? 'entry' : 'entries'}</p>${table(h2, list.map(pick), sub)}</section>`;
+      });
+      const grand = sumRow(h2, rest.map(pick), 'All arms');
+      return parts.join('') + (grand ? `<section class="keep"><h2>All arms</h2>${table(h2, [], grand)}</section>` : '');
     })
     .join('');
-  return `<h1>${esc(title)}</h1>${subtitle ? `<p class="doc-sub">${esc(subtitle)}</p>` : ''}${body}`;
+  return `<h1>${esc(title)}</h1>${opts.subtitle ? `<p class="doc-sub">${esc(opts.subtitle)}</p>` : ''}${opts.intro ?? ''}${body}`;
 }
