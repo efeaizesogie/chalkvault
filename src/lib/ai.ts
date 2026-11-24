@@ -458,6 +458,89 @@ export async function mapColumns(headers: string[], columns: { key: string; labe
   };
 }
 
+// ---------- Lesson notes and quizzes: no student data, hybrid ----------
+
+let lessonModel: GenerativeModel | null = null;
+const quizModels = new Map<number, GenerativeModel>();
+
+/** Stream a lesson note (objectives, content, activities, evaluation). No student data; PREFER_ON_DEVICE. */
+export async function writeLessonNote(o: { subject: string; level: string; topic: string; week: string; country: string; extra: string }, onText: (t: string, s: Source) => void) {
+  lessonModel ??= getGenerativeModel(ai(), {
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] } },
+    inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { temperature: 0.5 } },
+  });
+  const local = (await deviceStatus()) === 'available';
+  const prompt = [
+    `Write a lesson note for ${o.subject}, ${o.level}${o.country === 'Nigeria' ? ' (Nigerian NERDC scheme of work)' : ''}. Topic: ${o.topic}.${o.week ? ` Week ${o.week}.` : ''}`,
+    o.extra ? `Teacher’s notes: ${o.extra.slice(0, 600)}` : '',
+    'Use these plain headings on their own lines: Objectives, Instructional materials, Introduction, Lesson content, Class activity, Evaluation, Assignment.',
+    'Under Objectives, write 3 lines starting "By the end of the lesson, students should be able to". Keep the whole note under 450 words, in clear English suited to the class. Use local, everyday Nigerian examples where they help. No markdown symbols.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const t0 = performance.now();
+  const res = await lessonModel.generateContentStream(prompt);
+  let text = '';
+  for await (const c of res.stream) {
+    text += c.text();
+    onText(text, local ? 'on_device' : 'in_cloud');
+  }
+  const final = await res.response;
+  return { text, source: (final.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device') as Source, prompt, ms: performance.now() - t0 };
+}
+
+/** Multiple-choice quiz as structured JSON (responseConstraint on-device, responseSchema in the cloud). */
+export async function writeQuiz(o: { subject: string; level: string; topic: string; notes: string; count: number }) {
+  let m = quizModels.get(o.count);
+  if (!m) {
+    const item = {
+      type: 'object',
+      properties: {
+        question: { type: 'string' },
+        options: { type: 'array', items: { type: 'string' }, minItems: 4, maxItems: 4 },
+        answer: { type: 'integer', minimum: 0, maximum: 3, description: 'Index of the correct option.' },
+        explanation: { type: 'string' },
+      },
+      required: ['question', 'options', 'answer', 'explanation'],
+    };
+    const jsonSchema = { type: 'object', properties: { questions: { type: 'array', items: item, minItems: o.count, maxItems: o.count } }, required: ['questions'] };
+    m = getGenerativeModel(ai(), {
+      mode: InferenceMode.PREFER_ON_DEVICE,
+      onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] }, promptOptions: { responseConstraint: jsonSchema } },
+      inCloudParams: {
+        model: CLOUD_MODELS[0],
+        generationConfig: {
+          responseMimeType: 'application/json',
+          responseSchema: Schema.object({
+            properties: {
+              questions: Schema.array({
+                items: Schema.object({ properties: { question: Schema.string(), options: Schema.array({ items: Schema.string() }), answer: Schema.integer(), explanation: Schema.string() } }),
+              }),
+            },
+          }),
+          temperature: 0.4,
+        },
+      },
+    });
+    quizModels.set(o.count, m);
+  }
+  const prompt = [
+    `Write ${o.count} multiple-choice questions for ${o.subject}, ${o.level}, on "${o.topic}", suitable for a computer-based test.`,
+    'Each has exactly four options, one correct answer (its index 0–3), and a one-sentence explanation. Mix easy, medium and harder questions. Vary which option is correct.',
+    o.notes ? `Base them on this lesson note:\n${o.notes.slice(0, 3500)}` : '',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const t0 = performance.now();
+  const res = await m.generateContent(prompt);
+  const obj = JSON.parse(res.response.text().trim().replace(/^```(?:json)?|```$/g, '')) as { questions?: { question: string; options: string[]; answer: number; explanation: string }[] };
+  const questions = (obj.questions ?? [])
+    .filter((q) => q.question && Array.isArray(q.options) && q.options.length >= 2)
+    .map((q) => ({ question: q.question, options: q.options.slice(0, 4), answer: Math.min(Math.max(0, Math.round(q.answer)), Math.min(3, q.options.length - 1)), explanation: q.explanation ?? '' }));
+  return { questions, source: (res.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device') as Source, prompt, ms: performance.now() - t0 };
+}
+
 // ---------- Parent messages: one name-free template, translated per language, filled in locally ----------
 
 let messageModel: GenerativeModel | null = null;

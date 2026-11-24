@@ -35,6 +35,9 @@ import { InventoryPage } from './modules/InventoryPage';
 import { AlumniPage } from './modules/AlumniPage';
 import './styles.css';
 import './platform.css';
+import { registerPwa } from './modules/pwa';
+
+registerPwa();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

@@ -1,0 +1,87 @@
+/* Admissions, the public apply form, and the behaviour log. */
+
+.field textarea {
+  border: 1px solid var(--ink);
+  border-radius: 16px;
+  padding: 10px 12px;
+  background: var(--sheet);
+  color: inherit;
+  min-width: 0;
+  resize: vertical;
+  min-height: 84px;
+}
+.field.full {
+  grid-column: 1 / -1;
+}
+
+.apply-done {
+  display: grid;
+  gap: 12px;
+}
+
+.app-link {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.app-link code {
+  flex: 1;
+  min-width: 0;
+  overflow-x: auto;
+  white-space: nowrap;
+  border: 1px solid var(--rule);
+  border-radius: 12px;
+  padding: 8px 12px;
+  background: var(--paper-2);
+  font-size: 13px;
+}
+
+.app-detail {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--rule);
+  padding-top: 12px;
+}
+.app-fields {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 14px;
+  margin: 0;
+}
+.app-fields dt {
+  color: var(--muted);
+  font-size: 13px;
+}
+.app-fields dd {
+  margin: 0;
+}
+
+.incident-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.incident-item {
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  padding: 12px 14px;
+  display: grid;
+  gap: 6px;
+}
+.incident-item p {
+  margin: 0;
+}
+.incident-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.incident-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
