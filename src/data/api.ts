@@ -151,7 +151,7 @@ export async function updateSchool(schoolId: string, patch: Partial<Omit<School,
 /** Deletes a school and its records. Only the owner can do this (enforced by rules). */
 export async function deleteSchool(schoolId: string, ownerUid: string) {
   const db = getDb();
-  for (const col of [paths.records, paths.students, paths.classes, paths.terms, paths.invites, paths.ledger]) {
+  for (const col of [paths.records, paths.subjectRecords, paths.attendance, paths.offerings, paths.notices, paths.students, paths.classes, paths.terms, paths.invites, paths.ledger]) {
     const snap = await getDocs(col(schoolId));
     for (let i = 0; i < snap.docs.length; i += 400) {
       const b = writeBatch(db);
@@ -315,6 +315,34 @@ export async function setTeaching(schoolId: string, m: Member, o: Offering, on: 
   b.update(paths.member(schoolId, m.uid), { offeringIds, subjectClassIds });
   b.update(paths.offering(schoolId, o.id), { teacherIds: on ? arrayUnion(m.uid) : arrayRemove(m.uid) });
   await b.commit();
+}
+
+/** Add an arm (e.g. JSS 1C) with every school subject as an offering. */
+export async function addArm(schoolId: string, level: string, arm: string, subjects: string[], colour: ClassRoom['colour']) {
+  const id = uid();
+  const b = writeBatch(getDb());
+  b.set(paths.class(schoolId, id), { id, name: `${level}${arm.length <= 2 ? '' : ' '}${arm}`, level, arm, subject: '', colour, createdAt: now() } satisfies ClassRoom);
+  for (const subject of subjects) {
+    const oid = uid();
+    b.set(paths.offering(schoolId, oid), { id: oid, classId: id, subject, teacherIds: [], studentIds: null, createdAt: now() } satisfies Offering);
+  }
+  await b.commit();
+  return id;
+}
+/** Add a subject to the school and to every arm that doesn't have it yet. */
+export async function addSubjectEverywhere(schoolId: string, subject: string, classes: ClassRoom[], offerings: Offering[]) {
+  const b = writeBatch(getDb());
+  for (const c of classes) {
+    if (offerings.some((o) => o.classId === c.id && o.subject === subject)) continue;
+    const oid = uid();
+    b.set(paths.offering(schoolId, oid), { id: oid, classId: c.id, subject, teacherIds: [], studentIds: null, createdAt: now() } satisfies Offering);
+  }
+  await b.commit();
+}
+/** Add one subject to one arm (for electives or a class that was set up before subjects existed). */
+export async function addOffering(schoolId: string, classId: string, subject: string) {
+  const oid = uid();
+  await setDoc(paths.offering(schoolId, oid), { id: oid, classId, subject, teacherIds: [], studentIds: null, createdAt: now() } satisfies Offering);
 }
 
 // ---------- Subject records ----------

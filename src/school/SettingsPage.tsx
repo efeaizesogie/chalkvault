@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addTerm, deleteSchool, saveClass, updateSchool } from '../data/api';
-import { CLASS_COLOURS, type ClassRoom } from '../data/types';
+import { addArm, addSubjectEverywhere, addTerm, deleteClass, deleteOffering, deleteSchool, saveClass, updateSchool } from '../data/api';
+import { CLASS_COLOURS, COLOUR_KEYS, type ClassRoom, type SchoolPolicy, type Term } from '../data/types';
+import { updateDoc } from 'firebase/firestore';
+import { paths } from '../data/api';
 import { COUNTRIES } from './presets';
 import { assessmentsOf, bandsOf, parseAssessments, parseBands } from '../lib/results';
 import { AddClassDialog } from '../components/AddClassDialog';
@@ -10,20 +12,27 @@ import { useToast } from '../ui/toast';
 import { useSchool } from './SchoolContext';
 
 export function SettingsPage() {
-  const { school, schoolId, terms, term, classes, me } = useSchool();
+  const { school, schoolId, terms, term, classes, offerings, members, me, policy } = useSchool();
   const { signOut, user } = useAuth();
   const toast = useToast();
   const nav = useNavigate();
   const [name, setName] = useState(school.name);
   const [country, setCountry] = useState(school.country);
+  const [address, setAddress] = useState(school.address ?? '');
+  const [motto, setMotto] = useState(school.motto ?? '');
+  const [principal, setPrincipal] = useState(school.principalName ?? '');
   const [levels, setLevels] = useState(school.levels.join('\n'));
-  const [subjects, setSubjects] = useState(school.subjects.join('\n'));
+  const [newSubject, setNewSubject] = useState('');
   const [newTerm, setNewTerm] = useState('');
+  const [newSession, setNewSession] = useState(term?.session ?? '');
   const [assess, setAssess] = useState(assessmentsOf(school).map((a) => `${a.label}, ${a.max}`).join('\n'));
   const [bands, setBands] = useState(bandsOf(school).map((b) => `${b.grade}, ${b.min}, ${b.remark}`).join('\n'));
   const [limit, setLimit] = useState(String(school.commentLimit ?? 600));
-  const [editing, setEditing] = useState<ClassRoom | 'new' | null>(null);
+  const [rules, setRules] = useState<SchoolPolicy>(policy);
+  const [editing, setEditing] = useState<ClassRoom | null>(null);
+  const [addingArm, setAddingArm] = useState<Record<string, string>>({});
   const lines = (s: string) => s.split(/\r?\n/).map((x) => x.trim()).filter(Boolean);
+  const fail = (e: unknown) => toast((e as Error).message, 'error');
 
   const saveDetails = async () => {
     try {
@@ -33,44 +42,122 @@ export function SettingsPage() {
       await updateSchool(schoolId, {
         name: name.trim() || school.name,
         country,
+        address: address.trim(),
+        motto: motto.trim(),
+        principalName: principal.trim(),
         levels: lines(levels),
-        subjects: lines(subjects),
         assessments,
         gradeBands,
         commentLimit: Math.max(100, Number(limit) || 600),
+        policy: rules,
       });
-      toast('School details saved.');
+      toast('Settings saved.');
     } catch (e) {
-      toast((e as Error).message, 'error');
+      fail(e);
     }
   };
 
   const startTerm = async () => {
     if (!newTerm.trim()) return;
     const id = await addTerm(schoolId, newTerm.trim(), terms.length + 1);
+    if (newSession.trim()) await updateDoc(paths.term(schoolId, id), { session: newSession.trim() });
     await updateSchool(schoolId, { currentTermId: id });
     setNewTerm('');
-    toast(`${newTerm.trim()} is now the current term. Earlier terms’ comments are kept on each student's record.`);
+    toast(`${newTerm.trim()} is now the current term. Earlier terms stay on every student’s record.`);
   };
+
+  const setTermField = (t: Term, patch: Partial<Term>) => updateDoc(paths.term(schoolId, t.id), patch).catch(fail);
+
+  const addSubject = async () => {
+    const s = newSubject.trim();
+    if (!s) return;
+    try {
+      if (!school.subjects.includes(s)) await updateSchool(schoolId, { subjects: [...school.subjects, s] });
+      await addSubjectEverywhere(schoolId, s, classes, offerings);
+      setNewSubject('');
+      toast(`${s} added to every arm.`);
+    } catch (e) {
+      fail(e);
+    }
+  };
+  const removeSubject = async (s: string) => {
+    if (!confirm(`Remove ${s} from every arm? Scores already entered stay on file but the subject disappears from score sheets and report cards.`)) return;
+    try {
+      for (const o of offerings.filter((x) => x.subject === s)) await deleteOffering(schoolId, o, members);
+      await updateSchool(schoolId, { subjects: school.subjects.filter((x) => x !== s) });
+    } catch (e) {
+      fail(e);
+    }
+  };
+
+  const rule = <K extends keyof SchoolPolicy>(k: K, v: SchoolPolicy[K]) => setRules((r) => ({ ...r, [k]: v }));
+  const toggle = (k: keyof SchoolPolicy, label: string, hint: string) => (
+    <label className="switch">
+      <input type="checkbox" checked={rules[k] as boolean} onChange={(e) => rule(k, e.target.checked as never)} />
+      <span>
+        <b>{label}</b>
+        <small>{hint}</small>
+      </span>
+    </label>
+  );
+
+  const levelList = lines(levels);
 
   return (
     <div className="page">
       <header className="page-head">
         <div>
           <h1 className="display-sm">Settings</h1>
-          <p className="lede">{school.name}</p>
+          <p className="lede">Every rule here is your school’s choice.</p>
         </div>
         <button className="ticket" onClick={saveDetails}>
-          Save details
+          Save settings
         </button>
       </header>
 
       <div className="record-grid">
         <section className="panel">
-          <h2 className="h3">School</h2>
+          <h2 className="h3">How your school runs</h2>
+          <label className="field">
+            <span className="mono">Who takes attendance</span>
+            <select value={rules.attendanceBy} onChange={(e) => rule('attendanceBy', e.target.value as SchoolPolicy['attendanceBy'])}>
+              <option value="form">The form teacher, once a day</option>
+              <option value="subject">Each subject teacher, every lesson</option>
+              <option value="admin">Admins only</option>
+            </select>
+          </label>
+          <label className="field">
+            <span className="mono">A teacher can be form teacher of</span>
+            <select value={rules.formClassesPerTeacher} onChange={(e) => rule('formClassesPerTeacher', e.target.value as SchoolPolicy['formClassesPerTeacher'])}>
+              <option value="one">One arm only</option>
+              <option value="many">More than one arm</option>
+            </select>
+          </label>
+          {toggle('teachersManageStudents', 'Form teachers can add and edit students', 'Otherwise only admins manage the student list.')}
+          {toggle('approvalRequired', 'Comments need approval before results are published', 'Admins approve and lock each form teacher’s comment.')}
+          {toggle('subjectRemarks', 'Subject teachers write a remark per subject', 'Shown beside each subject on the report card.')}
+          {toggle('showPositions', 'Show positions on report cards', 'Class position and position in each subject.')}
+          {toggle('cloudCommentFallback', 'Cloud help for comments, with names removed', 'Used only when a teacher’s computer can’t run Gemini Nano.')}
+          {toggle('cloudScanning', 'Read score-sheet photos in the cloud', 'A score sheet shows names, so this sends names to Google’s cloud. Leave off to read sheets on-device only.')}
+        </section>
+
+        <section className="panel">
+          <h2 className="h3">School details</h2>
           <label className="field">
             <span className="mono">Name</span>
             <input value={name} onChange={(e) => setName(e.target.value)} />
+          </label>
+          <label className="field">
+            <span className="mono">Address, shown on report cards</span>
+            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="12 Admiralty Way, Lekki, Lagos" />
+          </label>
+          <label className="field">
+            <span className="mono">Motto</span>
+            <input value={motto} onChange={(e) => setMotto(e.target.value)} />
+          </label>
+          <label className="field">
+            <span className="mono">Principal or head teacher</span>
+            <input value={principal} onChange={(e) => setPrincipal(e.target.value)} />
           </label>
           <label className="field">
             <span className="mono">Country</span>
@@ -80,22 +167,87 @@ export function SettingsPage() {
               ))}
             </select>
           </label>
+        </section>
+
+        <section className="panel wide">
+          <h2 className="h3">Classes and arms</h2>
+          <div className="arm-grid">
+            {levelList.map((level, li) => {
+              const arms = classes.filter((c) => c.level === level);
+              return (
+                <div key={level} className="arm-row">
+                  <span className="arm-level">{level}</span>
+                  <div className="chips">
+                    {arms.map((c) => (
+                      <button key={c.id} className="chip" onClick={() => setEditing(c)} title="Edit arm">
+                        <span className="swatch-dot" style={{ ['--c' as string]: CLASS_COLOURS[c.colour].bg }} aria-hidden />
+                        {c.name}
+                      </button>
+                    ))}
+                    <span className="arm-add">
+                      <input
+                        value={addingArm[level] ?? ''}
+                        onChange={(e) => setAddingArm((x) => ({ ...x, [level]: e.target.value }))}
+                        placeholder={school.arms?.[arms.length] ?? String.fromCharCode(65 + arms.length)}
+                        aria-label={`New arm for ${level}`}
+                      />
+                      <button
+                        className="link"
+                        onClick={async () => {
+                          const arm = (addingArm[level] || school.arms?.[arms.length] || String.fromCharCode(65 + arms.length)).trim();
+                          await addArm(schoolId, level, arm, school.subjects, COLOUR_KEYS[(li + arms.length) % COLOUR_KEYS.length]).catch(fail);
+                          setAddingArm((x) => ({ ...x, [level]: '' }));
+                        }}
+                      >
+                        Add arm
+                      </button>
+                    </span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
           <label className="field">
             <span className="mono">Class levels, one per line</span>
-            <textarea className="ruled" rows={6} value={levels} onChange={(e) => setLevels(e.target.value)} />
-          </label>
-          <label className="field">
-            <span className="mono">Subjects, one per line</span>
-            <textarea className="ruled" rows={6} value={subjects} onChange={(e) => setSubjects(e.target.value)} />
+            <textarea className="ruled" rows={4} value={levels} onChange={(e) => setLevels(e.target.value)} />
           </label>
         </section>
 
         <section className="panel">
-          <h2 className="h3">Terms</h2>
+          <h2 className="h3">Subjects</h2>
+          <p className="muted small">Each subject is taught in every arm unless you remove it from an arm on the class page.</p>
+          <ul className="settings-classes">
+            {school.subjects.map((s) => (
+              <li key={s}>
+                <span>{s}</span>
+                <span className="mono muted">{offerings.filter((o) => o.subject === s).length} arms</span>
+                <button className="link danger" onClick={() => removeSubject(s)}>
+                  Remove
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="inline-add">
+            <input value={newSubject} onChange={(e) => setNewSubject(e.target.value)} placeholder="e.g. Further Mathematics" />
+            <button className="pill ink" onClick={addSubject} disabled={!newSubject.trim()}>
+              Add subject
+            </button>
+          </div>
+        </section>
+
+        <section className="panel">
+          <h2 className="h3">Terms and sessions</h2>
           <ol className="term-list">
             {terms.map((t) => (
-              <li key={t.id}>
-                <span>{t.name}</span>
+              <li key={t.id} className="term-row">
+                <span>
+                  {t.name}
+                  {t.session ? `, ${t.session}` : ''}
+                </span>
+                <label className="field inline small">
+                  <span className="mono">Next term begins</span>
+                  <input type="date" defaultValue={t.nextTermBegins ?? ''} onBlur={(e) => setTermField(t, { nextTermBegins: e.target.value })} />
+                </label>
                 {t.id === term?.id ? (
                   <span className="mono final-tag">Current</span>
                 ) : (
@@ -108,70 +260,47 @@ export function SettingsPage() {
           </ol>
           <div className="inline-add">
             <input value={newTerm} onChange={(e) => setNewTerm(e.target.value)} placeholder="e.g. Second term" />
+            <input value={newSession} onChange={(e) => setNewSession(e.target.value)} placeholder="Session, e.g. 2026/2027" />
             <button className="pill ink" onClick={startTerm} disabled={!newTerm.trim()}>
-              Start new term
+              Start term
             </button>
           </div>
-
-          <div className="panel-head">
-            <h2 className="h3">Classes</h2>
-            <button className="link" onClick={() => setEditing('new')}>
-              + Add class
-            </button>
-          </div>
-          <ul className="settings-classes">
-            {classes.map((c) => (
-              <li key={c.id}>
-                <i className="swatch-dot" style={{ ['--c' as string]: CLASS_COLOURS[c.colour].bg }} />
-                <span>{c.name}</span>
-                <span className="mono muted">{c.level}</span>
-                <button className="link" onClick={() => setEditing(c)}>
-                  Edit
-                </button>
-              </li>
-            ))}
-          </ul>
         </section>
 
         <section className="panel">
-          <h2 className="h3">Scores and grades</h2>
+          <h2 className="h3">Score sheet and grades</h2>
           <label className="field">
-            <span className="mono">Assessments: name, maximum score (one per line)</span>
+            <span className="mono">Score sheet columns: name, maximum score (one per line)</span>
             <textarea className="ruled" rows={4} value={assess} onChange={(e) => setAssess(e.target.value)} />
           </label>
           <label className="field">
             <span className="mono">Grade bands: grade, minimum %, remark (one per line)</span>
             <textarea className="ruled" rows={6} value={bands} onChange={(e) => setBands(e.target.value)} />
           </label>
-        </section>
-
-        <section className="panel">
-          <h2 className="h3">Report comments</h2>
           <label className="field">
-            <span className="mono">Longest comment allowed, in characters</span>
+            <span className="mono">Longest form teacher comment, in characters</span>
             <input inputMode="numeric" value={limit} onChange={(e) => setLimit(e.target.value)} />
           </label>
-          <p className="muted small">Teachers see a live count. A comment over the limit can’t be sent for approval.</p>
         </section>
 
         <section className="panel wide danger-zone">
           <h2 className="h3">Your data</h2>
           <p className="muted small">
-            Records are stored in this school’s private space in Firebase. Only staff you invite can open them, and teachers only see their own classes. The AI never
-            receives a student’s name.
+            Records are stored in this school’s private space in Firebase. Only staff you invite can open them, and each teacher sees only their own arms and
+            subjects. The AI never receives a student’s name unless you switch on cloud reading of score sheets above.
           </p>
           {me.role === 'owner' && (
             <button
               className="pill ghost danger"
               onClick={async () => {
-                const typed = prompt(`This permanently deletes ${school.name}: every class, student record, note and comment. Type the school name to confirm.`);
+                const typed = prompt(`This permanently deletes ${school.name}: every class, student record, score and comment. Type the school name to confirm.`);
                 if (typed?.trim() !== school.name) return;
                 try {
                   await deleteSchool(schoolId, me.uid);
                   if (user?.isAnonymous) await signOut();
                   nav('/', { replace: true });
                 } catch (e) {
-                  toast((e as Error).message, 'error');
+                  fail(e);
                 }
               }}
             >
@@ -183,11 +312,22 @@ export function SettingsPage() {
 
       {editing && (
         <AddClassDialog
-          initial={editing === 'new' ? null : editing}
+          initial={editing}
           usedColours={classes.map((c) => c.colour)}
           levels={school.levels}
           subjects={school.subjects}
-          onSave={(c) => saveClass(schoolId, c).then(() => setEditing(null))}
+          onSave={(c) =>
+            saveClass(schoolId, c)
+              .then(() => setEditing(null))
+              .catch(fail)
+          }
+          onDelete={() => {
+            if (!confirm(`Delete ${editing.name}? Only do this if the arm has no students.`)) return;
+            Promise.all(offerings.filter((o) => o.classId === editing.id).map((o) => deleteOffering(schoolId, o, members)))
+              .then(() => deleteClass(schoolId, editing.id))
+              .then(() => setEditing(null))
+              .catch(fail);
+          }}
           onClose={() => setEditing(null)}
         />
       )}

@@ -50,7 +50,7 @@ export function Workspace() {
 }
 
 function Frame() {
-  const { school, schoolId, me, isAdmin, myClasses, terms, term } = useSchool();
+  const { school, schoolId, me, isAdmin, terms, term, formClasses, myOfferings, classes } = useSchool();
   const { user, signOut } = useAuth();
   const nav = useNavigate();
   const toast = useToast();
@@ -151,30 +151,51 @@ function Frame() {
           <NavLink end to={`/s/${schoolId}`} className="side-link">
             Overview
           </NavLink>
-          <div className="side-head mono">{isAdmin ? 'Classes' : 'My classes'}</div>
-          {myClasses.map((c) => {
-            const col = CLASS_COLOURS[c.colour];
-            return (
-              <NavLink key={c.id} to={`/s/${schoolId}/classes/${c.id}`} className="side-class" style={{ ['--c' as string]: col.bg }}>
-                <i className="swatch-dot" />
-                {c.name}
-              </NavLink>
-            );
-          })}
-          {myClasses.length === 0 && <p className="side-empty muted small">{isAdmin ? 'No classes yet.' : 'No classes assigned to you yet.'}</p>}
+          {isAdmin && (
+            <NavLink to={`/s/${schoolId}/classes`} end className="side-link">
+              Classes
+            </NavLink>
+          )}
+          {formClasses.length > 0 && <div className="side-head mono">{formClasses.length > 1 ? 'My form classes' : 'My form class'}</div>}
+          {formClasses.map((c) => (
+            <NavLink key={c.id} to={`/s/${schoolId}/classes/${c.id}`} className="side-class" style={{ ['--c' as string]: CLASS_COLOURS[c.colour].bg }}>
+              <span className="swatch-dot" aria-hidden />
+              {c.name}
+            </NavLink>
+          ))}
+          {!isAdmin && (
+            <>
+              <div className="side-head mono">My subjects</div>
+              {myOfferings.map((o) => (
+                <NavLink key={o.id} to={`/s/${schoolId}/subjects/${o.id}`} className="side-link side-subject">
+                  {o.subject}
+                  <span className="muted small">{classes.find((c) => c.id === o.classId)?.name}</span>
+                </NavLink>
+              ))}
+              {myOfferings.length === 0 && formClasses.length === 0 && <p className="side-empty muted small">Nothing assigned to you yet.</p>}
+            </>
+          )}
           <div className="side-head mono">School</div>
           <NavLink to={`/s/${schoolId}/students`} className="side-link">
             Students
           </NavLink>
           {isAdmin && (
             <>
+              <NavLink to={`/s/${schoolId}/results`} className="side-link">
+                Results
+              </NavLink>
               <NavLink to={`/s/${schoolId}/staff`} className="side-link">
                 Staff
               </NavLink>
-              <NavLink to={`/s/${schoolId}/settings`} className="side-link">
-                Settings
-              </NavLink>
             </>
+          )}
+          <NavLink to={`/s/${schoolId}/notices`} className="side-link">
+            Notices
+          </NavLink>
+          {isAdmin && (
+            <NavLink to={`/s/${schoolId}/settings`} className="side-link">
+              Settings
+            </NavLink>
           )}
         </nav>
         <main className="ws-main">

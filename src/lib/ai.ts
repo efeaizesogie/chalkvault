@@ -360,6 +360,42 @@ export function prepareOutbound(comment: string, name: string, roster: string[])
 
 export const LANGUAGES = ['Yoruba', 'Hausa', 'Igbo', 'Spanish', 'French', 'Portuguese', 'Arabic', 'Mandarin Chinese', 'Haitian Creole', 'Vietnamese'];
 
+// ---------- Short remarks (subject teacher, principal): hybrid, never given a name ----------
+
+let remarkModel: GenerativeModel | null = null;
+
+/**
+ * One short report-card remark from facts and a teacher's note. Names are removed from the note
+ * before the prompt is built, so the request is safe whichever way PREFER_ON_DEVICE routes it.
+ */
+export async function writeRemark(r: { kind: 'subject' | 'principal'; subject?: string; facts: string; note?: string; roster: string[]; studentName: string }) {
+  remarkModel ??= getGenerativeModel(ai(), {
+    mode: InferenceMode.PREFER_ON_DEVICE,
+    onDeviceParams: { createOptions: { expectedInputs: [{ type: 'text', languages: ['en'] }], expectedOutputs: [{ type: 'text', languages: ['en'] }] } },
+    inCloudParams: { model: CLOUD_MODELS[0], generationConfig: { temperature: 0.5 } },
+  });
+  const note = r.note ? redact(r.note.slice(0, 600), r.studentName, r.roster).text : '';
+  const prompt = [
+    r.kind === 'subject'
+      ? `Write one short subject teacher's remark (at most 14 words) for a school report card in ${r.subject}.`
+      : "Write one short principal's remark (at most 20 words) for a school report card.",
+    'Be specific, warm and honest. No names, no greeting. Do not invent facts.',
+    `Facts: ${r.facts}`,
+    note ? `Teacher's note (shorthand): ${note}` : '',
+    'Return only the remark.',
+  ]
+    .filter(Boolean)
+    .join('\n');
+  const t0 = performance.now();
+  const res = await remarkModel.generateContent(prompt);
+  return {
+    text: res.response.text().trim().replace(/^["“]|["”]$/g, ''),
+    source: (res.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device') as Source,
+    prompt,
+    ms: performance.now() - t0,
+  };
+}
+
 /** Languages Gemini Nano can write on-device (Prompt API expectedOutputs). Others go to the cloud, de-identified. */
 export const ON_DEVICE_LANGUAGES: Record<string, string> = { French: 'fr', Spanish: 'es', German: 'de', Japanese: 'ja' };
 const translateModels = new Map<string, GenerativeModel>();
