@@ -1,0 +1,144 @@
+{
+  "name": "chalkvault",
+  "title": "Chalkvault",
+  "url": "http://localhost:5178/",
+  "sheetBg": [
+    226,
+    226,
+    224
+  ],
+  "shotCss": "html{scrollbar-width:none}::-webkit-scrollbar{display:none}",
+  "shots": [
+    {
+      "name": "hero-4k",
+      "device": "hero4k",
+      "at": "0"
+    },
+    {
+      "name": "desktop-hero",
+      "device": "desktop",
+      "at": "0"
+    },
+    {
+      "name": "desktop-features",
+      "device": "desktop",
+      "at": "document.getElementById('features').offsetTop + 40",
+      "settle": 900
+    },
+    {
+      "name": "desktop-privacy",
+      "device": "desktop",
+      "at": "document.getElementById('privacy').offsetTop - 20",
+      "settle": 900
+    },
+    {
+      "name": "mobile-hero",
+      "device": "mobile",
+      "at": "0"
+    }
+  ],
+  "frost": {
+    "base": "#efe9dc",
+    "glow": "rgba(244,214,78,.22)",
+    "wash": [
+      "rgba(247,244,238,.58)",
+      "rgba(239,233,221,.48)",
+      "rgba(247,244,238,.52)"
+    ]
+  },
+  "renders": [
+    {
+      "type": "window",
+      "shot": "desktop-hero"
+    },
+    {
+      "type": "window",
+      "shot": "desktop-dashboard"
+    },
+    {
+      "type": "window",
+      "shot": "desktop-charts"
+    },
+    {
+      "type": "window",
+      "shot": "desktop-reportcard"
+    },
+    {
+      "type": "window",
+      "shot": "desktop-print"
+    },
+    {
+      "type": "window",
+      "shot": "desktop-import"
+    },
+    {
+      "type": "window",
+      "shot": "desktop-features"
+    },
+    {
+      "type": "combo",
+      "laptop": "desktop-dashboard",
+      "phone": "mobile-dashboard"
+    },
+    {
+      "type": "desktop",
+      "shot": "desktop-charts"
+    },
+    {
+      "type": "mobile",
+      "phones": [
+        "mobile-hero",
+        "mobile-dashboard"
+      ]
+    },
+    {
+      "type": "hero",
+      "shot": "hero-4k"
+    }
+  ],
+  "xsplit": {
+    "laptop": "desktop-dashboard",
+    "phones": [
+      "mobile-hero",
+      "mobile-dashboard"
+    ],
+    "blur": 80,
+    "frost": {
+      "base": "#17191c",
+      "glow": "rgba(244,214,78,.20)",
+      "wash": [
+        "rgba(23,25,28,.78)",
+        "rgba(23,25,28,.70)",
+        "rgba(23,25,28,.86)"
+      ]
+    },
+    "logo": "<svg viewBox='0 0 512 512'><rect width='512' height='512' rx='104' fill='#f4d64e'/><g stroke='#17191c' stroke-width='34' stroke-linecap='round'><line x1='150' y1='188' x2='362' y2='188'/><line x1='150' y1='256' x2='362' y2='256'/><line x1='150' y1='324' x2='290' y2='324'/></g></svg><span style=\"font-family:Georgia,serif;font-style:italic;font-weight:400\">Chalkvault</span>",
+    "logoColor": "rgba(255,253,248,.94)"
+  },
+  "grids": [
+    {
+      "name": "grid-4",
+      "cols": 2,
+      "images": [
+        "window-hero",
+        "window-dashboard",
+        "window-reportcard",
+        "mobile"
+      ]
+    },
+    {
+      "name": "grid-8",
+      "cols": 2,
+      "images": [
+        "window-hero",
+        "window-dashboard",
+        "window-charts",
+        "window-reportcard",
+        "window-print",
+        "window-import",
+        "combo",
+        "mobile"
+      ]
+    }
+  ]
+}

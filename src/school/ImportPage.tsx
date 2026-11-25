@@ -425,7 +425,7 @@ export function ImportPage() {
 
           <section className="panel apply-bar">
             <p>
-              This will add {counts.newStudents} new students{counts.updates ? `, fill in ${counts.updates} existing records` : ''}
+              This will add {counts.newStudents} new students{counts.updates ? `, fill in ${counts.updates} existing record${counts.updates === 1 ? "" : "s"}` : ''}
               {counts.newArms ? `, create ${counts.newArms} arms` : ''}
               {counts.scores ? `, save ${counts.scores} scores` : ''}
               {counts.balances ? `, carry ${counts.balances} fee balances into this term’s invoices` : ''}

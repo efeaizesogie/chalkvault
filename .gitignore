@@ -5,3 +5,8 @@ dist
 .firebase
 *.log
 .claude/settings.local.json
+
+# Marketing mockups (large images, made locally)
+mockups/_shots/
+mockups/*.png
+mockups/x-split/
