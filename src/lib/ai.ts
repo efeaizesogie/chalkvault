@@ -603,14 +603,24 @@ export async function draftParentMessage(kind: 'absence' | 'fees' | 'results' | 
     `Write a short, warm, respectful text message from ${schoolName} to a parent in Nigeria, to ${purpose}.`,
     gist ? `The school’s note: ${gist.slice(0, 600)}` : '',
     `Use these placeholders exactly as written, and no real names: ${allowed}. [STUDENT] is the child's first name, so write "[STUDENT]" on its own, never "your [STUDENT]".`,
+    'Never make up any other bracketed text, link, phone number or account detail; use only what the school’s note says.',
     'At most 60 words. Plain text, no emoji, no subject line. End with the school’s name.',
   ]
     .filter(Boolean)
     .join('\n');
   const t0 = performance.now();
   const res = await messageModel.generateContent(prompt);
+  // Small models sometimes add their own "[link to payment details]": drop any sentence that holds a bracket we did not ask for.
+  const ok = new Set(allowed.split(', '));
+  const text = res.response
+    .text()
+    .trim()
+    .replace(/^["“]|["”]$/g, '')
+    .split(/(?<=[.!?])\s+/)
+    .filter((s) => (s.match(/\[[^\]]*\]/g) || []).every((b) => ok.has(b)))
+    .join(' ');
   return {
-    text: res.response.text().trim().replace(/^["“]|["”]$/g, ''),
+    text,
     source: (res.response.inferenceSource === InferenceSource.IN_CLOUD ? 'in_cloud' : 'on_device') as Source,
     prompt,
     ms: performance.now() - t0,
