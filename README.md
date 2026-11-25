@@ -1,16 +1,35 @@
 # Chalkvault
 
-**Report-card comments written by AI on the teacher's own laptop. Student names never leave the device.**
+**Run the whole school, with a private AI.** Admissions, registers, scores, report cards, fees, timetables, parent messages and the principal's dashboard in one place, for Nigerian primary and secondary schools. The AI that helps runs on the teacher's own laptop, through **Firebase AI Logic hybrid inference** with **Gemini Nano in Chrome**, so children's names stay in school.
 
-Teachers write hundreds of report comments a term, and many already paste student notes into chatbots to cope. Many school districts ban this, because FERPA and student-privacy rules forbid sending identifiable student information to outside AI tools. Chalkvault gives teachers the same help without the privacy risk:
+- **Live:** https://efeaizesogie.github.io/chalkvault/ (choose **Try the demo school**; no sign-up)
+- **Demo video:** see the Devpost entry (3 minutes or less)
+- Built for Google's #BuildHybridAI hackathon. Apache-2.0.
 
-- **Real names and blunt notes go in. A warm, specific comment comes out**, written by **Gemini Nano inside Chrome** through Firebase AI Logic's hybrid inference. It works with Wi-Fi off.
-- **Photographed gradebook notes** are read on-device (text + image input).
-- **Structured output:** strength, growth area and next step as JSON, put together into an editable comment in the chosen tone and reading level.
-- **Batch the whole class** on-device at $0 per comment.
-- **Cloud only for non-identifying work.** Parent translations (Yoruba, Hausa, Igbo, Spanish, …) and alignment to curriculum standards go to cloud Gemini, but only after every name on the roster is replaced locally. The teacher sees exactly what will leave the device before it's sent, and the name is put back in locally afterwards.
-- **A ledger** of every AI request shows where it ran and how many characters, if any, were sent.
-- Export to the clipboard, CSV or PDF. All data lives in IndexedDB in the teacher's browser, with no account and no sync.
+## Why
+
+Most Nigerian schools still run on exercise books, Excel sheets and WhatsApp groups. At report time, teachers paste rough notes, names and all, into public chatbots to keep up. Chalkvault brings the records together and gives staff the same AI help, but **the work that touches a child's name runs on the device**. Only name-free work goes to the cloud, and every request is shown in a ledger.
+
+## For judges: a two-minute tour
+
+1. Open the live site in **desktop Chrome** and click **Try the demo school**. A school with 84 students, 12 arms and 15 staff opens in about 5 seconds.
+2. The chip at the top right says **Gemini Nano ready** when on-device AI is available (see "On-device setup" below). Without it, every feature still works through the cloud path, with names removed first.
+3. On the **Overview**, click **Write this morning's brief**.
+4. Open **Classes → Primary 5A → Form comments**, pick a student and click **Write comment**. Then use **Translate for parents → Yoruba** to see exactly what leaves the device before it is sent.
+5. Open **Bring in records** and drop in a photo of a handwritten class list.
+6. Click **Ledger** (top right) to see every AI request, where it ran and what was sent.
+
+Measured on a 2018 laptop (i7-8750H, 16 GB RAM, Gemini Nano on the CPU path in Chrome 158):
+
+| Task | Where it ran | Time |
+|---|---|---|
+| Morning brief | On-device | 89 s |
+| Report comment, streamed | On-device | about 90 s |
+| Yoruba translation of a comment | Cloud, names removed | 2.4 s |
+| Handwritten register photo, 8 students | On-device | 138 s |
+| Parent message template | On-device | about 30 s |
+
+A newer laptop with a supported GPU is several times faster.
 
 ## The school platform
 
@@ -83,9 +102,16 @@ The research behind these choices is in [RESEARCH.md](RESEARCH.md).
 
 | Task | Firebase AI Logic mode | What it sees |
 |---|---|---|
-| Write a comment (single or batch) | `PREFER_ON_DEVICE`, with `responseConstraint` JSON schema on-device and `responseSchema` in the cloud | **On-device:** real name, raw notes, photo. **Cloud fallback** (no Nano, teacher allowed it): the de-identified notes only; photos are refused. |
-| Parent translation | `ONLY_IN_CLOUD` | The finished comment with `[STUDENT]` / `[CLASSMATE A]` placeholders |
+| Write a comment (single or batch) | `PREFER_ON_DEVICE`, streamed, with `responseConstraint` JSON schema on-device and `responseSchema` in the cloud | **On-device:** real name, raw notes, photo. **Cloud fallback** (no Nano, teacher allowed it): the de-identified notes only; photos are refused. |
+| Support flag on each comment | `PREFER_ON_DEVICE`, enum output | The comment, on the same path |
+| Register, score-sheet and receipt photos | `ONLY_ON_DEVICE`, image to JSON | The photo; cloud only if the owner turns on cloud scanning |
+| Bring in records (photos and PDF pages) | `ONLY_ON_DEVICE`: enum to sort the page, then JSON for that kind of page | One page at a time |
+| Morning brief, "Explain this", Ask Chalkvault | `PREFER_ON_DEVICE`, streamed | Figures worked out in code; on the cloud path every name becomes a code like `[S7]` |
+| Parent message template | `PREFER_ON_DEVICE` | No names: placeholders only, filled in locally |
+| Parent translation | On-device for French and Spanish (`expectedOutputs`); `ONLY_IN_CLOUD` for Yoruba, Hausa, Igbo and others | The finished text with `[STUDENT]` placeholders |
 | Align to standards | `ONLY_IN_CLOUD` (JSON output) | Same de-identified comment |
+| Lesson notes and quizzes | `PREFER_ON_DEVICE`; quizzes in batches of five with a cloud fallback | No student data |
+| CBT column mapping | `PREFER_ON_DEVICE` | The header row only |
 
 **Privacy router:** before each comment, Chalkvault checks `LanguageModel.availability()` with the same options the SDK uses.
 - If Gemini Nano is available, the SDK runs the request on-device, and the real name is used.
@@ -106,6 +132,8 @@ npm run dev     # http://localhost:5178
 1. Create a Firebase project. Enable **Firebase AI Logic** with the Gemini Developer API and register a web app.
 2. Copy `.env.example` to `.env.local` and fill in the web config and your App Check (reCAPTCHA Enterprise) site key. For GitHub Pages, add the same `VITE_*` values as repository secrets; the deploy workflow passes them to the build.
 3. On localhost, App Check uses a debug token. Copy the token printed in the console into Firebase console → App Check → Manage debug tokens.
+
+### On-device setup
 
 To get on-device inference, use desktop Chrome with Gemini Nano:
 - Chrome 139+ with these flags enabled:

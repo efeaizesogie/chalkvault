@@ -10,3 +10,7 @@ dist
 mockups/_shots/
 mockups/*.png
 mockups/x-split/
+mockups/*.jpg
+
+# Submission drafts (Devpost text, posts), kept local
+submission/
